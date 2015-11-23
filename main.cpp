@@ -6,11 +6,18 @@
 using namespace cv;
 //using namespace std;
 
-#define THRESH_VALUE 200
-#define THRESH_MODE 0
-#define THRESH_MAX_VALUE 255
-#define PROJ_PATH "/home/pool/Documents/ENSC440/"
- 
+void test(std::vector<cv::Mat>& frame)
+{
+  imshow("FrameFirst",frame[0]); 
+  imshow("FrameSecond",frame[250]); 
+  imshow("Difference",frame[1] - frame[250]);  
+}
+
+void interpolate(/*args*/)
+{
+
+}
+
 int main(int argc,char* argv[])
 {
   cv::VideoCapture cap;
@@ -27,28 +34,16 @@ int main(int argc,char* argv[])
   {
     cap.set(CV_CAP_PROP_POS_FRAMES,i);
     cap.read(frame);
-    //cap >> frame;
+
     videoFrame.push_back(frame);
     if (!frame.data) break;
-    std::cout << "Frame " << i << " ";
+    //std::cout << "Frame " << i << " ";
     frame.release();
   }
 
-  videoFrame.size();
-  imshow("FrameFirst",videoFrame[0]); 
-  imshow("FrameSecond",videoFrame[250]); 
-  imshow("Difference",videoFrame[1] - videoFrame[250]);  
+  test(videoFrame);
 
-//  frame.convertTo(thresh_img, cv::COLOR_RGB2YUV_IYUV, 
-  //cv::cvtColor( frame, thresh_img, CV_RGB2GRAY );
-  //cv::threshold( thresh_img, thresh_img, THRESH_VALUE, THRESH_MAX_VALUE, THRESH_MODE );
-  //cv::Mat threshVideo;;
-		
-  //lets show the output
-  //cv::imshow("original", frame);
-  //cv::imshow("Thresholded", thresh_img);
-                                    
-    //Wait until any key is pressed
+  //Wait until any key is pressed
   cv::waitKey(0);
   std::cout << "Exiting application\n";
 

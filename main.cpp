@@ -32,8 +32,8 @@ public:
     {
 //      capture.set(CV_CAP_PROP_POS_FRAMES,i);
       capture.read(frame);
-      inFrames.push_back(frame);
       if (!frame.data) break;
+      inFrames.push_back(frame);
       frame.release();
 //      std::cout << i << " ";
     }
@@ -60,7 +60,7 @@ public:
     std::cout << "Last frame colsize: " <<inFrames[inFrames.size()-1].cols << std::endl;
 
     // Need to skip the last frame because it is invalid for some reason.
-    for (unsigned long int i = 0; i < inFrames.size() -1 ;i++)
+    for (unsigned long int i = 0; i < inFrames.size();i++)
     {
       cv::resize(inFrames[i],inFrames[i],outImageSize,scaleFactor,scaleFactor,cv::INTER_CUBIC);
       //outFrames.push_back(inFrames[i]);

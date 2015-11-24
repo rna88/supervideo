@@ -30,12 +30,12 @@ public:
 
     for (int i = 0;;i++)
     {
-      capture.set(CV_CAP_PROP_POS_FRAMES,i);
+//      capture.set(CV_CAP_PROP_POS_FRAMES,i);
       capture.read(frame);
-
       inFrames.push_back(frame);
       if (!frame.data) break;
       frame.release();
+//      std::cout << i << " ";
     }
   }
 
@@ -47,9 +47,25 @@ public:
     imshow("Cb", frame.V);
   }
 
-  void resize()
+  void resize(char* scaleFactorString)
   {
-//    inFrames[0].imencode
+    double scaleFactor = 0;
+    cv::Size outImageSize(0,0);
+    scaleFactor = std::atof(scaleFactorString);
+
+    //cv::resize(inFrames[0],inFrames[0],outImageSize,scaleFactor,scaleFactor,cv::INTER_CUBIC);
+    //imshow("Resized",inFrames[0]);
+
+    std::cout << "Total # Frames: " << inFrames.size() << std::endl;
+    std::cout << "Last frame colsize: " <<inFrames[inFrames.size()-1].cols << std::endl;
+
+    // Need to skip the last frame because it is invalid for some reason.
+    for (unsigned long int i = 0; i < inFrames.size() -1 ;i++)
+    {
+      cv::resize(inFrames[i],inFrames[i],outImageSize,scaleFactor,scaleFactor,cv::INTER_CUBIC);
+      //outFrames.push_back(inFrames[i]);
+      //std::cout << i << " " << inFrames[i].rows << " ";;
+    }
   }
   
   void writeVideo(char* outFileName)
@@ -111,7 +127,8 @@ int main(int argc,char* argv[])
 
   supervideo sv;
   sv.readVideo(argv[1]);
-  sv.interpolate();
+//  sv.interpolate();
+  sv.resize(argv[3]);
   sv.writeVideo(argv[2]);
 
   //Wait until any key is pressed

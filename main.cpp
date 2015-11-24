@@ -49,23 +49,22 @@ public:
 
   void resize(char* scaleFactorString)
   {
-    double scaleFactor = 0;
+    double scaleFactor = std::atof(scaleFactorString);
     cv::Size outImageSize(0,0);
-    scaleFactor = std::atof(scaleFactorString);
 
     //cv::resize(inFrames[0],inFrames[0],outImageSize,scaleFactor,scaleFactor,cv::INTER_CUBIC);
     //imshow("Resized",inFrames[0]);
 
     std::cout << "Total # Frames: " << inFrames.size() << std::endl;
-    std::cout << "Last frame colsize: " <<inFrames[inFrames.size()-1].cols << std::endl;
 
-    // Need to skip the last frame because it is invalid for some reason.
-    for (unsigned long int i = 0; i < inFrames.size();i++)
+    for (unsigned long int i = 0; i < inFrames.size(); i++)
     {
+      std::cout << "\r" << "Scaling Frame: " << i+1 << "/" << inFrames.size();
       cv::resize(inFrames[i],inFrames[i],outImageSize,scaleFactor,scaleFactor,cv::INTER_CUBIC);
       //outFrames.push_back(inFrames[i]);
       //std::cout << i << " " << inFrames[i].rows << " ";;
     }
+    std::cout << "\n";
   }
   
   void writeVideo(char* outFileName)
@@ -82,8 +81,10 @@ public:
     {
       for (unsigned long int i = 0; i < inFrames.size();i++)
       {
+        std::cout << "\r" << "Writing Frame: " << i+1 << "/" << inFrames.size();
         writer.write(inFrames[i]);
       }
+      std::cout << "\n";
     }
     else 
     {
@@ -96,9 +97,7 @@ private:
 
   std::vector<cv::Mat> inFrames;
   std::vector<cv::Mat> outFrames;
-  
   cv::VideoCapture capture;
-
 
   channels convertToYUV(cv::Mat& image)
   {

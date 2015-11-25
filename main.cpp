@@ -1,7 +1,8 @@
-#include </usr/include/opencv/cv.h>
-#include </usr/include/opencv/ml.h>
-#include </usr/include/opencv/cxcore.h>
-#include </usr/include/opencv/highgui.h>
+#include </usr/include/opencv2/opencv.hpp>
+//#include </usr/include/opencv/cv.h>
+//#include </usr/include/opencv/ml.h>
+//#include </usr/include/opencv/cxcore.h>
+//#include </usr/include/opencv/highgui.h>
  
 //using namespace cv;
 //using namespace std;
@@ -60,12 +61,28 @@ public:
     for (unsigned long int i = 0; i < inFrames.size(); i++)
     {
       std::cout << "\r" << "Scaling Frame: " << i+1 << "/" << inFrames.size();
-      cv::resize(inFrames[i],inFrames[i],outImageSize,scaleFactor,scaleFactor,cv::INTER_CUBIC);
+      cv::resize(inFrames[i],inFrames[i],outImageSize,scaleFactor,scaleFactor,CV_INTER_CUBIC);
       //outFrames.push_back(inFrames[i]);
       //std::cout << i << " " << inFrames[i].rows << " ";;
     }
     std::cout << "\n";
+
+    
+//    // apply ALD operation (local sharp edge detector).
+//    //channels ALDResult = convertToYUV(inFrames[0]);
+//    float searchRadius = 5; // 5 pixels.
+//    cv::Mat grayFrame;
+//    cv::cvtColor(inFrames[0],grayFrame,CV_RGB2GRAY);
+//    for (int y = 0; y < grayFrame.cols; y++)
+//    {
+//      for (int x = 0; x < grayFrame.rows; x++)
+//      {
+//        calculateALD(grayFrame, cv::Point(x,y), searchRadius);
+//      }
+//    }
+
   }
+  
   
   void writeVideo(char* outFileName)
   {
@@ -99,7 +116,7 @@ private:
   std::vector<cv::Mat> outFrames;
   cv::VideoCapture capture;
 
-  channels convertToYUV(cv::Mat& image)
+  channels convertToYUV(cv::Mat image)
   {
     cv::cvtColor(image, image, CV_RGB2YCrCb);
     cv::Mat channel[3];
@@ -112,6 +129,36 @@ private:
     frame.V = channel[2];
   
     return frame;
+  }
+
+  float distance(float x1, float y1, float x2, float y2)
+  {
+
+    return cv::sqrt( (x1-x2)*(x1-x2) - (y1-y2)*(y1-y2) );
+  }
+
+  cv::Mat calculateALD(cv::Mat& inImage, cv::Point gp, float radius)
+  {
+    float ALD = 0;
+    int p = 0;
+    cv::Mat outImage;
+    
+    // Limit search to valid areas on the image.
+    for (int y = (gp.y - radius); y < inImage.cols && y >= 0; y++)
+    {
+      for (int x = (gp.x - radius); x < inImage.rows && x >= 0; x++)
+      {
+	if ( distance(gp.x, gp.y, x, y) <= radius )
+	{
+       	  p++;
+          //ALD += cv::fast_abs(gp - inImage.rows(x).col(y));
+	}
+      }
+    }
+
+    ALD /= float(p);
+
+    return outImage;
   }
 
 };

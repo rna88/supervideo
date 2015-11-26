@@ -1,11 +1,5 @@
 #include </usr/include/opencv2/opencv.hpp>
-//#include </usr/include/opencv/cv.h>
-//#include </usr/include/opencv/ml.h>
-//#include </usr/include/opencv/cxcore.h>
-//#include </usr/include/opencv/highgui.h>
- 
-//using namespace cv;
-//using namespace std;
+
 
 class supervideo
 {
@@ -66,7 +60,6 @@ public:
       //std::cout << i << " " << inFrames[i].rows << " ";;
     }
     std::cout << "\n";
-
     
 //    // apply ALD operation (local sharp edge detector).
 //    //channels ALDResult = convertToYUV(inFrames[0]);
@@ -137,11 +130,12 @@ private:
     return cv::sqrt( (x1-x2)*(x1-x2) - (y1-y2)*(y1-y2) );
   }
 
-  cv::Mat calculateALD(cv::Mat& inImage, cv::Point gp, float radius)
+  float calculateALD(cv::Mat& inImage, cv::Point gp, float radius)
   {
     float ALD = 0;
     int p = 0;
-    cv::Mat outImage;
+    cv::Scalar gcValue = 0;
+    cv::Scalar gpValue = 0;
     
     // Limit search to valid areas on the image.
     for (int y = (gp.y - radius); y < inImage.cols && y >= 0; y++)
@@ -151,16 +145,17 @@ private:
 	if ( distance(gp.x, gp.y, x, y) <= radius )
 	{
        	  p++;
-          //ALD += cv::fast_abs(gp - inImage.rows(x).col(y));
+	  gpValue = inImage.at<double>(gp.y,gp.x);
+	  gcValue = inImage.at<double>(y,x);
+          ALD += cv::fast_abs(gpValue.val[0] - gcValue.val[0]);
 	}
       }
     }
 
     ALD /= float(p);
 
-    return outImage;
+    return ALD;
   }
-
 };
 
 int main(int argc,char* argv[])

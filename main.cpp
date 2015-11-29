@@ -1,11 +1,14 @@
 #include </usr/include/opencv2/opencv.hpp>
 
+#define Y 0
+//#define U 1
+//#define V 2
 
 class supervideo
 {
 public:
 
-  struct channels { cv::Mat Y,U,V; };
+  //struct channels { cv::Mat Y,U,V; };
 
   supervideo()
   {
@@ -62,7 +65,7 @@ public:
     //cv::cvtColor(outFrames[0],grayFrame,CV_RGB2YCrCb);
     //imshow("YUV",grayFrame); 
 
-    //cv::Scalar gpValue = grayFrame.at<uchar>(0,0);
+    ////cv::Scalar gpValue = grayFrame.at<uchar>(0,0);
 
     ////Scalar 
     //cv::cvtColor(grayFrame,grayFrame,CV_YCrCb2RGB);
@@ -70,11 +73,17 @@ public:
 
     //channels YUVMat = convertToYUV(outFrames[0]);
     std::vector<cv::Mat> YUVMat = convertToYUV(outFrames[0]);
-    imshow("Y",YUVMat[0]);  
+    imshow("Y",YUVMat[Y]);  
     //imshow("U",YUVMat[1]);  
     //imshow("V",YUVMat[2]);  
-    
-    
+   
+    cv::Mat grayFrame; 
+    cv::merge(YUVMat,grayFrame);
+    imshow("grayFrame",grayFrame);
+    cv::cvtColor(grayFrame,grayFrame,CV_YCrCb2RGB);
+    imshow("RGB",grayFrame); 
+
+
     // apply ALD operation (local sharp edge detector).
     //channels ALDResult = convertToYUV(inFrames[0]);
     

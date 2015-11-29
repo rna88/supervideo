@@ -36,10 +36,10 @@ public:
 
   void interpolate()
   {
-    channels frame = convertToYUV(inFrames[0]);
-    imshow("Y", frame.Y);
-    imshow("Cr", frame.U);
-    imshow("Cb", frame.V);
+    //channels frame = convertToYUV(inFrames[0]);
+    //imshow("Y", frame.Y);
+    //imshow("Cr", frame.U);
+    //imshow("Cb", frame.V);
   }
 
   void resize(char* scaleFactorString)
@@ -57,6 +57,23 @@ public:
       //std::cout << i << " " << inFrames[i].rows << " ";;
     }
     std::cout << "\n";
+    
+    //cv::Mat grayFrame;
+    //cv::cvtColor(outFrames[0],grayFrame,CV_RGB2YCrCb);
+    //imshow("YUV",grayFrame); 
+
+    //cv::Scalar gpValue = grayFrame.at<uchar>(0,0);
+
+    ////Scalar 
+    //cv::cvtColor(grayFrame,grayFrame,CV_YCrCb2RGB);
+    //imshow("RGB",grayFrame); 
+
+    //channels YUVMat = convertToYUV(outFrames[0]);
+    std::vector<cv::Mat> YUVMat = convertToYUV(outFrames[0]);
+    imshow("Y",YUVMat[0]);  
+    //imshow("U",YUVMat[1]);  
+    //imshow("V",YUVMat[2]);  
+    
     
     // apply ALD operation (local sharp edge detector).
     //channels ALDResult = convertToYUV(inFrames[0]);
@@ -113,19 +130,19 @@ private:
   std::vector<cv::Mat> outFrames;
   cv::VideoCapture capture;
 
-  channels convertToYUV(cv::Mat image)
+  std::vector<cv::Mat> convertToYUV(cv::Mat image)
   {
     cv::cvtColor(image, image, CV_RGB2YCrCb);
-    cv::Mat channel[3];
+    std::vector<cv::Mat> channel;
+    //cv::Mat channel[3];
     cv::split(image, channel);
   
-    channels frame;
+    //channels frame;
+    //frame.Y = channel[0];
+    //frame.U = channel[1];
+    //frame.V = channel[2];
   
-    frame.Y = channel[0];
-    frame.U = channel[1];
-    frame.V = channel[2];
-  
-    return frame;
+    return channel;
   }
 
   float distance(float x1, float y1, float x2, float y2)

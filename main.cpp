@@ -47,52 +47,56 @@ public:
     double scaleFactor = std::atof(scaleFactorString);
     cv::Size outImageSize(0,0);
 
-    //cv::resize(inFrames[0],inFrames[0],outImageSize,scaleFactor,scaleFactor,cv::INTER_CUBIC);
-    //imshow("Resized",inFrames[0]);
-
     std::cout << "Total # Frames: " << inFrames.size() << std::endl;
 
     for (unsigned long int i = 0; i < inFrames.size(); i++)
     {
       std::cout << "\r" << "Scaling Frame: " << i+1 << "/" << inFrames.size();
-      cv::resize(inFrames[i],inFrames[i],outImageSize,scaleFactor,scaleFactor,CV_INTER_CUBIC);
-      //outFrames.push_back(inFrames[i]);
+      outFrames.push_back(inFrames[i]);
+      cv::resize(outFrames[i],outFrames[i],outImageSize,scaleFactor,scaleFactor,CV_INTER_CUBIC);
       //std::cout << i << " " << inFrames[i].rows << " ";;
     }
     std::cout << "\n";
     
-//    // apply ALD operation (local sharp edge detector).
-//    //channels ALDResult = convertToYUV(inFrames[0]);
-//    float searchRadius = 5; // 5 pixels.
-//    cv::Mat grayFrame;
-//    cv::cvtColor(inFrames[0],grayFrame,CV_RGB2GRAY);
-//    for (int y = 0; y < grayFrame.cols; y++)
-//    {
-//      for (int x = 0; x < grayFrame.rows; x++)
-//      {
-//        calculateALD(grayFrame, cv::Point(x,y), searchRadius);
-//      }
-//    }
+    // apply ALD operation (local sharp edge detector).
+    //channels ALDResult = convertToYUV(inFrames[0]);
+    
+    //float searchRadius = 5; // 5 pixels.
+    //cv::Mat grayFrame  = ALDResult.Y;
+    //cv::Mat extractedEdges;
 
+    //extractedEdges.rows = grayFrame.rows;
+    //extractedEdges.cols = grayFrame.cols;
+
+//  //  cv::cvtColor(inFrames[0],grayFrame,CV_RGB2GRAY);
+
+    //float currentALD = 0.0;
+    //for (int y = 0; y < grayFrame.cols; y++)
+    //{
+    //  for (int x = 0; x < grayFrame.rows; x++)
+    //  {
+    //    calculateALD(grayFrame, cv::Point(x,y), searchRadius);
+    //     
+    //  }
+    //}
   }
-  
   
   void writeVideo(char* outFileName)
   {
     // These parameters need to be changed to reflect any previous processing.
     double inputFPS = capture.get(CV_CAP_PROP_FPS);
-    int width = inFrames[0].cols; 
-    int height = inFrames[0].rows; 
+    int width = outFrames[0].cols; 
+    int height = outFrames[0].rows; 
   
     cv::Size frameSize(width, height);
     cv::VideoWriter writer(outFileName, CV_FOURCC('D','I','V','3'), inputFPS, frameSize, true);
   
     if (writer.isOpened())
     {
-      for (unsigned long int i = 0; i < inFrames.size();i++)
+      for (unsigned long int i = 0; i < outFrames.size();i++)
       {
-        std::cout << "\r" << "Writing Frame: " << i+1 << "/" << inFrames.size();
-        writer.write(inFrames[i]);
+        std::cout << "\r" << "Writing Frame: " << i+1 << "/" << outFrames.size();
+        writer.write(outFrames[i]);
       }
       std::cout << "\n";
     }
@@ -163,7 +167,7 @@ int main(int argc,char* argv[])
   if (argc <= 1) 
   { 
     std::cout << "Usage: main <input video file> <output video file>\n"; 
-    exit(1);
+    return 0 /*exit(1)*/;
   }
 
   supervideo sv;

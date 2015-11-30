@@ -43,7 +43,7 @@ public:
 
   void resize(char* scaleFactorString)
   {
-    double scaleFactor = std::atof(scaleFactorString);
+    scaleFactor = std::atof(scaleFactorString);
     cv::Size outImageSize(0,0);
 
     std::cout << "Total # Frames: " << inFrames.size() << std::endl;
@@ -75,25 +75,22 @@ public:
     cv::Mat YUV;
     cv::cvtColor(outFrames[0],YUV,CV_RGB2YCrCb);
 
-    cv::Vec3b intensity = YUV.at<cv::Vec3b>(9,0);
-    int YChannel = intensity.val[0];
-    
-    std::cout << YChannel << std::endl;
     imshow("Y",YUV);
     
     
     //std::cout << inFrames[0] << std::endl;
     
     //std::cout << (int)YChannel << std::endl;
-   
+    cv::Mat RGB;
+    cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
+    imshow("R",RGB);
+
+
     for (int y = 0; y < YUV.cols; y++)
     {
       for (int x = 0; x < YUV.rows; x++)
       {
-        cv::Vec3b image = YUV.at<cv::Vec3b>(x,y);
-        //std::cout << (int)image.val[Y] << "|";
-        image.val[Y] = 0;
-	YUV.at<cv::Vec3b>(x,y) = image;
+	setValue(YUV,x,y,0);
       }
     //  std::cout << "\n";
     }
@@ -109,9 +106,9 @@ public:
 //      std::cout << "\n";
 //    }
 
-    cv::Mat RGB;
-    cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
-    imshow("R",RGB);
+    cv::Mat RGB_mod;
+    cv::cvtColor(YUV,RGB_mod,CV_YCrCb2RGB);
+    imshow("R_mod",RGB_mod);
 
 
    // imshow("Changed",YUVMat[Y]);  
@@ -169,9 +166,17 @@ public:
 
 private:
 
+  double scaleFactor;
   std::vector<cv::Mat> inFrames;
   std::vector<cv::Mat> outFrames;
   cv::VideoCapture capture;
+
+  void setValue(cv::Mat& img,int x, int y, int value)
+  {
+    cv::Vec3b image = img.at<cv::Vec3b>(x,y);
+    image.val[Y] = value;
+    img.at<cv::Vec3b>(x,y) = image;
+  }
 
   std::vector<cv::Mat> convertToYUV(cv::Mat image)
   {

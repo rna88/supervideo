@@ -58,14 +58,27 @@ public:
     std::cout << "\n";
 
 
-    cv::Mat YUV;
-    cv::cvtColor(outFrames[0],YUV,CV_RGB2YCrCb);
+    cv::Mat YUVOut = outFrames[0];
+    cv::imshow("OriginalRGB",YUVOut);
+    std::vector<cv::Mat> YUVChannels = convertToYUV(YUVOut);
+   
+    cv::imshow("YUVOut",YUVOut);
+
+    cv::Mat YChannel = YUVChannels[Y];
+    cv::imshow("Ychannel", YChannel);
+    // Use YChannel for algorthm. 
+
+
+    //cv::Mat YUV;
+    //cv::Mat YUV2;
+    //cv::cvtColor(outFrames[0],YUV,CV_RGB2YCrCb);
+    //cv::cvtColor(outFrames[0],YUV2,CV_RGB2YCrCb);
     //imshow("Y",YUV);
     
     //std::cout << inFrames[0] << std::endl;
     
     //std::cout << (int)YChannel << std::endl;
-    cv::Mat RGB;
+    //cv::Mat RGB;
     //cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
     //imshow("R",RGB);
 
@@ -106,7 +119,7 @@ public:
     // apply ALD operation (local sharp edge detector).
     //channels ALDResult = convertToYUV(inFrames[0]);
     
-    float searchRadius = 5; // 5 pixels.
+    float searchRadius = 10; // 5 pixels.
     //cv::Mat grayFrame  = ALDResult.Y;
     //cv::Mat extractedEdges;
 
@@ -115,7 +128,7 @@ public:
 
 //  //  cv::cvtColor(inFrames[0],grayFrame,CV_RGB2GRAY);
 
-    cv::Mat ALD = YUV;
+ //   cv::Mat ALD = YUV;
     //cv::extractChannel(YUV,ALD,0);
     //imshow("ALD",ALD);
     
@@ -130,18 +143,62 @@ public:
     //}
 
     
-    //std::cout << calculateALD(YUV, cv::Point(150,152), searchRadius) << std::endl;
+    //std::cout << calculateALD(YUV, cv::Point(330,1), searchRadius) << std::endl;
 
-    //float currentALD = 0.0;
-    //for (int y = 0; y < YUV.cols; y++)
-    //{
-    //  for (int x = 0; x < YUV.rows; x++)
-    //  {
-    //    calculateALD(YUV, cv::Point(x,y), searchRadius);
-    //     
-    //  }
-    //}
-  }
+//    for (int y = 0; y < YUV.rows; y++)
+//    {
+//      for (int x = 0; x < YUV.cols; x++)
+//      {
+//        setPixel(YUV,x,y,(int)calculateALD(YUV, cv::Point(x,y), searchRadius));
+//      }
+//    }
+
+    
+    //std::cout << YUV.cols << "\n";
+
+    //cv::Mat eroded = YUV;
+    ////erode(YUV, eroded,3,3); 
+    //cv::extractChannel(eroded,eroded,0);
+    //cv::imshow("eroded",eroded);
+
+    //cv::Mat ALD;
+    //cv::extractChannel(YUV,ALD,0);
+    //cv::imshow("ALD",ALD);
+
+// Change to only handle 1 channel
+    //std::cout << (int)ALD.at<unsigned char>(20,40) << "safsdf";
+    //std::cout << "LOL\n\n\n\n";
+   
+    for (int y = 0; y < YChannel.rows; y++)
+    {
+      for (int x = 0; x < YChannel.cols; x++)
+      {
+        //setPixel(YUV,x,y,(int)calculateALD(YUV, cv::Point(x,y), searchRadius));
+        
+        YChannel.at<unsigned char>(y,x) = (int)calculateALD(YChannel, cv::Point(x,y), searchRadius);
+        //std::cout << (int)ALD.at<unsigned char>(y,x) << ":";
+      }
+    }
+
+
+    //cv::imshow("Ych",YChannel);
+    //cv::imshow("orig",outFrames[0]);
+    
+    //Assign modified Y channel back to vector
+    YUVChannels[Y] = YChannel;  
+    cv::imshow("ALD",YChannel);
+
+    // convert back to RGB format.
+    cv::Mat RGB = convertToRGB(YUVChannels);
+    cv::imshow("RGB",RGB);
+
+    
+    //cv::imshow("ALD2",ALD);
+    //cv::Mat Ychannel;
+    //cv::extractChannel(YUV2,Ychannel,0);
+    //cv::imshow("Y",Ychannel);
+  }  
+
   
   void writeVideo(char* outFileName)
   {
@@ -191,18 +248,18 @@ private:
   std::vector<cv::Mat> outFrames;
   cv::VideoCapture capture;
 
-  int readValue(cv::Mat& img,int x, int y)
+  int readPixel(cv::Mat& img,int x, int y)
   {
-    cv::Vec3b image = img.at<cv::Vec3b>(x,y);
+    cv::Vec3b image = img.at<cv::Vec3b>(y,x);
     int value = image.val[Y];
     return value;
   }
 
-  void setValue(cv::Mat& img,int x, int y, int value)
+  void setPixel(cv::Mat& img,int x, int y, int value)
   {
-    cv::Vec3b image = img.at<cv::Vec3b>(x,y);
+    cv::Vec3b image = img.at<cv::Vec3b>(y,x);
     image.val[Y] = value;
-    img.at<cv::Vec3b>(x,y) = image;
+    img.at<cv::Vec3b>(y,x) = image;
   }
 
   std::vector<cv::Mat> convertToYUV(cv::Mat image)
@@ -223,43 +280,79 @@ private:
 
   float distance(float x1, float y1, float x2, float y2)
   {
-
     return cv::sqrt( (x1-x2)*(x1-x2) - (y1-y2)*(y1-y2) );
   }
 
-  float calculateALD(cv::Mat& inImage, cv::Point gp, float radius)
+  float calculateALD(cv::Mat& inImage, cv::Point gc, float radius)
   {
     float ALD = 0;
     int p = 0;
-    //cv::Scalar gcValue = 0;
-    //cv::Scalar gpValue = 0;
-    int gcValue = 0;
     int gpValue = 0;
+    int gcValue = (int)inImage.at<unsigned char>(gc.y,gc.x);
+    //int gcValue = readPixel(inImage, gc.x, gc.y);
     
-
     // Limit search to valid areas on the image.
-    for (int y = (gp.y - radius); y <= (gp.y + radius); y++)
+    for (int y = (gc.y - radius); y <= (gc.y + radius); y++)
     {
-      for (int x = (gp.x - radius); x <= (gp.x + radius); x++)
+      for (int x = (gc.x - radius); x <= (gc.x + radius); x++)
       {
-	if ( distance(gp.x, gp.y, x, y) <= radius && x >= 0 && y >= 0 && x < inImage.cols && y < inImage.rows)
+	if ( (distance(gc.x, gc.y, x, y) <= radius) && 
+			(x >= 0) && 
+			(y >= 0) &&
+			(x < inImage.cols) &&
+			(y < inImage.rows) )
 	{
        	  p++;
-	  //gpValue = inImage.at<int>(gp.y,gp.x);
-	  //gcValue = inImage.at<int>(y,x);
-          //ALD += cv::fast_abs(gpValue.val[0] - gcValue.val[0]);
-	  gpValue = readValue(inImage, gp.x, gp.y);
-	  gcValue = readValue(inImage, x, y);
+	  gpValue = (int)inImage.at<unsigned char>(y,x);
+	  //gpValue = readPixel(inImage, x, y);
           ALD += cv::fast_abs( gpValue - gcValue );
+	  //if (x == 350) std:: cout << "hey";
 	}
       }
     }
 
     ALD /= float(p);
 
+    //ALD=1.0;
     return ALD;
   }
 
+  int findMin(cv::Mat& img,cv::Point p,int s,int t)
+  {
+    int min = 255;
+
+    for (int y = (p.y - t); y <= (p.y + t); y++)
+    {
+      for (int x = (p.x - s); x <= (p.x + s); x++)
+      {
+        int currentPixel = readPixel(img,x,y);
+        if ( currentPixel < min  && 
+			(x >= 0) &&
+			(y >= 0) &&
+			(x < img.cols) &&
+			(y < img.rows)) 
+	{
+          min = currentPixel;
+	}
+      }
+    }
+	//std::cout << min << ":";
+    return min;
+  }
+
+  // s,t indicate length/2 of area to search for min. eg s,t=1 -> 3x3 area.
+  void erode(cv::Mat& img, cv::Mat& out, int s, int t)
+  {
+    for (int y = 0; y < img.rows;y++) 
+    {
+      for (int x = 0; x < img.cols;x++) 
+      {
+        setPixel(out,x,y,findMin(img,cv::Point(x,y),s,t)); 
+      }
+    }
+  } 
+
+  // Reference this.
   double getPSNR(const cv::Mat& I1, const cv::Mat& I2)
   {
     cv::Mat s1;

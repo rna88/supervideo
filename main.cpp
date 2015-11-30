@@ -60,28 +60,28 @@ public:
 
     cv::Mat YUV;
     cv::cvtColor(outFrames[0],YUV,CV_RGB2YCrCb);
-    imshow("Y",YUV);
+    //imshow("Y",YUV);
     
     //std::cout << inFrames[0] << std::endl;
     
     //std::cout << (int)YChannel << std::endl;
     cv::Mat RGB;
-    cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
-    imshow("R",RGB);
+    //cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
+    //imshow("R",RGB);
 
-    cv::Mat gray = RGB;
-    cv::cvtColor(gray,gray,CV_RGB2GRAY);
+    //cv::Mat gray = RGB;
+    //cv::cvtColor(gray,gray,CV_RGB2GRAY);
 
 
-    for (int y = 0; y < YUV.cols; y++)
-    {
-      for (int x = 0; x < YUV.rows; x++)
-      {
-	int ct = readValue(YUV,x,y) + 10;
-	setValue(YUV,x,y,ct);
-      }
-    //  std::cout << "\n";
-    }
+   // for (int y = 0; y < YUV.cols; y++)
+   // {
+   //   for (int x = 0; x < YUV.rows; x++)
+   //   {
+   //     int ct = readValue(YUV,x,y) + 10;
+   //     setValue(YUV,x,y,ct);
+   //   }
+   // //  std::cout << "\n";
+   // }
 
 //    for (int y = 0; y < YUV.cols; y++)
 //    {
@@ -94,9 +94,9 @@ public:
 //      std::cout << "\n";
 //    }
 
-    cv::Mat RGB_mod;
-    cv::cvtColor(YUV,RGB_mod,CV_YCrCb2RGB);
-    imshow("R_mod",RGB_mod);
+   // cv::Mat RGB_mod;
+   // cv::cvtColor(YUV,RGB_mod,CV_YCrCb2RGB);
+   // imshow("R_mod",RGB_mod);
 
 
     // imshow("Changed",YUVMat[Y]);  
@@ -115,12 +115,29 @@ public:
 
 //  //  cv::cvtColor(inFrames[0],grayFrame,CV_RGB2GRAY);
 
-    //float currentALD = 0.0;
-    //for (int y = 0; y < grayFrame.cols; y++)
+    cv::Mat ALD = YUV;
+    //cv::extractChannel(YUV,ALD,0);
+    //imshow("ALD",ALD);
+    
+    //for (int y = 0; y < ALD.rows;y++)
     //{
-    //  for (int x = 0; x < grayFrame.rows; x++)
+    //  //for (int x = 0; x < ALD.rows;x++)
+    //  //{
+    //    //setValue(ALD,y,x,0); 
+    //          std::cout << ALD.at<uchar>(y,0) << ";";
+    //  //}
+    //  //std::cout << "\n";
+    //}
+
+    
+    //std::cout << calculateALD(YUV, cv::Point(150,152), searchRadius) << std::endl;
+
+    //float currentALD = 0.0;
+    //for (int y = 0; y < YUV.cols; y++)
+    //{
+    //  for (int x = 0; x < YUV.rows; x++)
     //  {
-    //    calculateALD(grayFrame, cv::Point(x,y), searchRadius);
+    //    calculateALD(YUV, cv::Point(x,y), searchRadius);
     //     
     //  }
     //}
@@ -214,20 +231,26 @@ private:
   {
     float ALD = 0;
     int p = 0;
-    cv::Scalar gcValue = 0;
-    cv::Scalar gpValue = 0;
+    //cv::Scalar gcValue = 0;
+    //cv::Scalar gpValue = 0;
+    int gcValue = 0;
+    int gpValue = 0;
     
+
     // Limit search to valid areas on the image.
-    for (int y = (gp.y - radius); y < inImage.cols && y >= 0; y++)
+    for (int y = (gp.y - radius); y <= (gp.y + radius); y++)
     {
-      for (int x = (gp.x - radius); x < inImage.rows && x >= 0; x++)
+      for (int x = (gp.x - radius); x <= (gp.x + radius); x++)
       {
-	if ( distance(gp.x, gp.y, x, y) <= radius && x >= 0 && y >= 0 )
+	if ( distance(gp.x, gp.y, x, y) <= radius && x >= 0 && y >= 0 && x < inImage.cols && y < inImage.rows)
 	{
        	  p++;
-	  gpValue = inImage.at<double>(gp.y,gp.x);
-	  gcValue = inImage.at<double>(y,x);
-          ALD += cv::fast_abs(gpValue.val[0] - gcValue.val[0]);
+	  //gpValue = inImage.at<int>(gp.y,gp.x);
+	  //gcValue = inImage.at<int>(y,x);
+          //ALD += cv::fast_abs(gpValue.val[0] - gcValue.val[0]);
+	  gpValue = readValue(inImage, gp.x, gp.y);
+	  gcValue = readValue(inImage, x, y);
+          ALD += cv::fast_abs( gpValue - gcValue );
 	}
       }
     }

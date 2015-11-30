@@ -81,20 +81,38 @@ public:
     std::cout << YChannel << std::endl;
     imshow("Y",YUV);
     
-    cv::Mat RGB;
-    cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
-    imshow("R",RGB);
+    
+    //std::cout << inFrames[0] << std::endl;
     
     //std::cout << (int)YChannel << std::endl;
    
-    //for (int y = 0; y < YUVMat[Y].cols; y++)
-    //{
-    //  for (int x = 0; x < YUVMat[Y].rows; x++)
-    //  {
-    //    std::cout << YUVMat[Y].at<int>(y,x);
-    //  }
+    for (int y = 0; y < YUV.cols; y++)
+    {
+      for (int x = 0; x < YUV.rows; x++)
+      {
+        cv::Vec3b image = YUV.at<cv::Vec3b>(x,y);
+        //std::cout << (int)image.val[Y] << "|";
+        image.val[Y] = 0;
+	YUV.at<cv::Vec3b>(y,x) = image;
+      }
     //  std::cout << "\n";
-    //}
+    }
+
+//    for (int y = 0; y < YUV.cols; y++)
+//    {
+//      for (int x = 0; x < YUV.rows; x++)
+//      {
+//        cv::Vec3b image = YUV.at<cv::Vec3b>(y,x);
+//        //std::cout << (int)image.val[Y] << "|";
+//	//std::cout << (int)image.val[Y]  << "|";
+//      }
+//      std::cout << "\n";
+//    }
+
+    cv::Mat RGB;
+    cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
+    imshow("R",RGB);
+
 
    // imshow("Changed",YUVMat[Y]);  
     //cv::Mat RGBMat = convertToRGB(YUVMat);

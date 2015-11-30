@@ -1,14 +1,10 @@
 #include </usr/include/opencv2/opencv.hpp>
 
 #define Y 0
-//#define U 1
-//#define V 2
 
 class supervideo
 {
 public:
-
-  //struct channels { cv::Mat Y,U,V; };
 
   supervideo()
   {
@@ -72,22 +68,42 @@ public:
     //imshow("RGB",grayFrame); 
 
     //channels YUVMat = convertToYUV(outFrames[0]);
-    std::vector<cv::Mat> YUVMat = convertToYUV(outFrames[0]);
-    imshow("Y",YUVMat[Y]);  
-    //imshow("U",YUVMat[1]);  
-    //imshow("V",YUVMat[2]);  
-   
-    cv::Mat grayFrame; 
-    cv::merge(YUVMat,grayFrame);
-    imshow("grayFrame",grayFrame);
-    cv::cvtColor(grayFrame,grayFrame,CV_YCrCb2RGB);
-    imshow("RGB",grayFrame); 
 
+    //std::vector<cv::Mat> YUVMat = convertToYUV(outFrames[0]);
+    //imshow("Y",YUVMat[Y]);  
+    
+    cv::Mat YUV;
+    cv::cvtColor(outFrames[0],YUV,CV_RGB2YCrCb);
+
+    cv::Vec3b intensity = YUV.at<cv::Vec3b>(9,0);
+    int YChannel = intensity.val[0];
+    
+    std::cout << YChannel << std::endl;
+    imshow("Y",YUV);
+    
+    cv::Mat RGB;
+    cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
+    imshow("R",RGB);
+    
+    //std::cout << (int)YChannel << std::endl;
+   
+    //for (int y = 0; y < YUVMat[Y].cols; y++)
+    //{
+    //  for (int x = 0; x < YUVMat[Y].rows; x++)
+    //  {
+    //    std::cout << YUVMat[Y].at<int>(y,x);
+    //  }
+    //  std::cout << "\n";
+    //}
+
+   // imshow("Changed",YUVMat[Y]);  
+    //cv::Mat RGBMat = convertToRGB(YUVMat);
+    //imshow("out",RGBMat);
 
     // apply ALD operation (local sharp edge detector).
     //channels ALDResult = convertToYUV(inFrames[0]);
     
-    //float searchRadius = 5; // 5 pixels.
+    float searchRadius = 5; // 5 pixels.
     //cv::Mat grayFrame  = ALDResult.Y;
     //cv::Mat extractedEdges;
 
@@ -143,15 +159,16 @@ private:
   {
     cv::cvtColor(image, image, CV_RGB2YCrCb);
     std::vector<cv::Mat> channel;
-    //cv::Mat channel[3];
     cv::split(image, channel);
-  
-    //channels frame;
-    //frame.Y = channel[0];
-    //frame.U = channel[1];
-    //frame.V = channel[2];
-  
     return channel;
+  }
+
+  cv::Mat convertToRGB(std::vector<cv::Mat> input)
+  {
+    cv::Mat output; 
+    cv::merge(input,output);
+    cv::cvtColor(output,output,CV_YCrCb2RGB);
+    return output;
   }
 
   float distance(float x1, float y1, float x2, float y2)
@@ -172,7 +189,7 @@ private:
     {
       for (int x = (gp.x - radius); x < inImage.rows && x >= 0; x++)
       {
-	if ( distance(gp.x, gp.y, x, y) <= radius )
+	if ( distance(gp.x, gp.y, x, y) <= radius && x >= 0 && y >= 0 )
 	{
        	  p++;
 	  gpValue = inImage.at<double>(gp.y,gp.x);
@@ -192,7 +209,7 @@ int main(int argc,char* argv[])
 {
   if (argc <= 1) 
   { 
-    std::cout << "Usage: main <input video file> <output video file>\n"; 
+    std::cout << "Usage: supervideo <input video file> <output video file> <scale Factor>\n"; 
     return 0 /*exit(1)*/;
   }
 

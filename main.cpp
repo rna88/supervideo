@@ -93,7 +93,7 @@ public:
         cv::Vec3b image = YUV.at<cv::Vec3b>(x,y);
         //std::cout << (int)image.val[Y] << "|";
         image.val[Y] = 0;
-	YUV.at<cv::Vec3b>(y,x) = image;
+	YUV.at<cv::Vec3b>(x,y) = image;
       }
     //  std::cout << "\n";
     }

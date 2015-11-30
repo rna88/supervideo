@@ -66,109 +66,11 @@ public:
 
     cv::Mat YChannel = YUVChannels[Y];
     cv::imshow("Ychannel", YChannel);
-    // Use YChannel for algorthm. 
+    // Use YChannel for rest of algorthm. 
 
-
-    //cv::Mat YUV;
-    //cv::Mat YUV2;
-    //cv::cvtColor(outFrames[0],YUV,CV_RGB2YCrCb);
-    //cv::cvtColor(outFrames[0],YUV2,CV_RGB2YCrCb);
-    //imshow("Y",YUV);
-    
-    //std::cout << inFrames[0] << std::endl;
-    
-    //std::cout << (int)YChannel << std::endl;
-    //cv::Mat RGB;
-    //cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
-    //imshow("R",RGB);
-
-    //cv::Mat gray = RGB;
-    //cv::cvtColor(gray,gray,CV_RGB2GRAY);
-
-
-   // for (int y = 0; y < YUV.cols; y++)
-   // {
-   //   for (int x = 0; x < YUV.rows; x++)
-   //   {
-   //     int ct = readValue(YUV,x,y) + 10;
-   //     setValue(YUV,x,y,ct);
-   //   }
-   // //  std::cout << "\n";
-   // }
-
-//    for (int y = 0; y < YUV.cols; y++)
-//    {
-//      for (int x = 0; x < YUV.rows; x++)
-//      {
-//        cv::Vec3b image = YUV.at<cv::Vec3b>(y,x);
-//        //std::cout << (int)image.val[Y] << "|";
-//	//std::cout << (int)image.val[Y]  << "|";
-//      }
-//      std::cout << "\n";
-//    }
-
-   // cv::Mat RGB_mod;
-   // cv::cvtColor(YUV,RGB_mod,CV_YCrCb2RGB);
-   // imshow("R_mod",RGB_mod);
-
-
-    // imshow("Changed",YUVMat[Y]);  
-    //cv::Mat RGBMat = convertToRGB(YUVMat);
-    //imshow("out",RGBMat);
-
-    // apply ALD operation (local sharp edge detector).
-    //channels ALDResult = convertToYUV(inFrames[0]);
     
     float searchRadius = 10; // 5 pixels.
-    //cv::Mat grayFrame  = ALDResult.Y;
-    //cv::Mat extractedEdges;
-
-    //extractedEdges.rows = grayFrame.rows;
-    //extractedEdges.cols = grayFrame.cols;
-
-//  //  cv::cvtColor(inFrames[0],grayFrame,CV_RGB2GRAY);
-
- //   cv::Mat ALD = YUV;
-    //cv::extractChannel(YUV,ALD,0);
-    //imshow("ALD",ALD);
-    
-    //for (int y = 0; y < ALD.rows;y++)
-    //{
-    //  //for (int x = 0; x < ALD.rows;x++)
-    //  //{
-    //    //setValue(ALD,y,x,0); 
-    //          std::cout << ALD.at<uchar>(y,0) << ";";
-    //  //}
-    //  //std::cout << "\n";
-    //}
-
-    
-    //std::cout << calculateALD(YUV, cv::Point(330,1), searchRadius) << std::endl;
-
-//    for (int y = 0; y < YUV.rows; y++)
-//    {
-//      for (int x = 0; x < YUV.cols; x++)
-//      {
-//        setPixel(YUV,x,y,(int)calculateALD(YUV, cv::Point(x,y), searchRadius));
-//      }
-//    }
-
-    
-    //std::cout << YUV.cols << "\n";
-
-    //cv::Mat eroded = YUV;
-    ////erode(YUV, eroded,3,3); 
-    //cv::extractChannel(eroded,eroded,0);
-    //cv::imshow("eroded",eroded);
-
-    //cv::Mat ALD;
-    //cv::extractChannel(YUV,ALD,0);
-    //cv::imshow("ALD",ALD);
-
-// Change to only handle 1 channel
-    //std::cout << (int)ALD.at<unsigned char>(20,40) << "safsdf";
-    //std::cout << "LOL\n\n\n\n";
-   
+  
     for (int y = 0; y < YChannel.rows; y++)
     {
       for (int x = 0; x < YChannel.cols; x++)
@@ -181,9 +83,6 @@ public:
     }
 
 
-    //cv::imshow("Ych",YChannel);
-    //cv::imshow("orig",outFrames[0]);
-    
     //Assign modified Y channel back to vector
     YUVChannels[Y] = YChannel;  
     cv::imshow("ALD",YChannel);
@@ -191,12 +90,7 @@ public:
     // convert back to RGB format.
     cv::Mat RGB = convertToRGB(YUVChannels);
     cv::imshow("RGB",RGB);
-
-    
-    //cv::imshow("ALD2",ALD);
-    //cv::Mat Ychannel;
-    //cv::extractChannel(YUV2,Ychannel,0);
-    //cv::imshow("Y",Ychannel);
+    //outFrames[i] = RGB;
   }  
 
   

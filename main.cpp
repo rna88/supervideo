@@ -56,27 +56,11 @@ public:
       //std::cout << i << " " << inFrames[i].rows << " ";;
     }
     std::cout << "\n";
-    
-    //cv::Mat grayFrame;
-    //cv::cvtColor(outFrames[0],grayFrame,CV_RGB2YCrCb);
-    //imshow("YUV",grayFrame); 
 
-    ////cv::Scalar gpValue = grayFrame.at<uchar>(0,0);
 
-    ////Scalar 
-    //cv::cvtColor(grayFrame,grayFrame,CV_YCrCb2RGB);
-    //imshow("RGB",grayFrame); 
-
-    //channels YUVMat = convertToYUV(outFrames[0]);
-
-    //std::vector<cv::Mat> YUVMat = convertToYUV(outFrames[0]);
-    //imshow("Y",YUVMat[Y]);  
-    
     cv::Mat YUV;
     cv::cvtColor(outFrames[0],YUV,CV_RGB2YCrCb);
-
     imshow("Y",YUV);
-    
     
     //std::cout << inFrames[0] << std::endl;
     
@@ -85,12 +69,16 @@ public:
     cv::cvtColor(YUV,RGB,CV_YCrCb2RGB);
     imshow("R",RGB);
 
+    cv::Mat gray = RGB;
+    cv::cvtColor(gray,gray,CV_RGB2GRAY);
+
 
     for (int y = 0; y < YUV.cols; y++)
     {
       for (int x = 0; x < YUV.rows; x++)
       {
-	setValue(YUV,x,y,0);
+	int ct = readValue(YUV,x,y) + 10;
+	setValue(YUV,x,y,ct);
       }
     //  std::cout << "\n";
     }
@@ -111,7 +99,7 @@ public:
     imshow("R_mod",RGB_mod);
 
 
-   // imshow("Changed",YUVMat[Y]);  
+    // imshow("Changed",YUVMat[Y]);  
     //cv::Mat RGBMat = convertToRGB(YUVMat);
     //imshow("out",RGBMat);
 
@@ -164,12 +152,34 @@ public:
     }
   }
 
+  void testPSNR()
+  {
+    double avgPSNR = 0;
+    cv::Size outImageSize(0,0);
+
+    for (unsigned long int i = 0; i < inFrames.size(); i++ ) 
+    {
+      cv::resize(outFrames[i],outFrames[i],outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_NN);
+      avgPSNR += getPSNR(inFrames[i],outFrames[i]);
+    }
+    avgPSNR /= inFrames.size();
+
+    std::cout << "Average PSNR per frame: " << avgPSNR << std::endl;
+  }
+
 private:
 
   double scaleFactor;
   std::vector<cv::Mat> inFrames;
   std::vector<cv::Mat> outFrames;
   cv::VideoCapture capture;
+
+  int readValue(cv::Mat& img,int x, int y)
+  {
+    cv::Vec3b image = img.at<cv::Vec3b>(x,y);
+    int value = image.val[Y];
+    return value;
+  }
 
   void setValue(cv::Mat& img,int x, int y, int value)
   {
@@ -226,6 +236,27 @@ private:
 
     return ALD;
   }
+
+  double getPSNR(const cv::Mat& I1, const cv::Mat& I2)
+  {
+    cv::Mat s1;
+    absdiff(I1, I2, s1);       // |I1 - I2|
+    s1.convertTo(s1, CV_32F);  // cannot make a square on 8 bits
+    s1 = s1.mul(s1);           // |I1 - I2|^2
+    cv::Scalar s = sum(s1);        // sum elements per channel
+    
+    double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
+    
+    if( sse <= 1e-10) // for small values return zero
+      return 0;
+    else
+    {
+      double mse  = sse / (double)(I1.channels() * I1.total());
+      double psnr = 10.0 * log10((255 * 255) / mse);
+      return psnr;
+    }
+  }
+
 };
 
 int main(int argc,char* argv[])
@@ -241,6 +272,8 @@ int main(int argc,char* argv[])
 //  sv.interpolate();
   sv.resize(argv[3]);
   sv.writeVideo(argv[2]);
+  sv.testPSNR();
+
 
   //Wait until any key is pressed
   cv::waitKey(0);

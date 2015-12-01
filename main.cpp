@@ -58,7 +58,6 @@ public:
     std::cout << "\n";
    
 
-
     cv::Mat YUVOut = outFrames[0];
     cv::imshow("OriginalRGB",YUVOut);
     std::vector<cv::Mat> YUVChannels = convertToYUV(YUVOut);
@@ -92,46 +91,74 @@ public:
     // Extract edges from ALD.
     cv::Mat extractMask;
     cv::Mat extractedEdges;
-    cv::adaptiveThreshold(ALD,extractMask,255,CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY, 9, 4);
+    cv::adaptiveThreshold(ALD, extractMask, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 3, 3);
     cv::bitwise_not( extractMask, extractMask );
+//    cv::GaussianBlur(extractMask, extractMask, cv::Size(3,3),5);
     cv::imshow("extractMask",extractMask);
     YChannel.copyTo(extractedEdges,extractMask);
-
     cv::imshow("extractedEdges",extractedEdges);
 
+    // Resize image and blur it.
+    cv::Size imageSize(0,0);
+    cv::resize(extractedEdges,extractedEdges,imageSize,2,2,CV_INTER_LINEAR);
+    cv::GaussianBlur(extractedEdges, extractedEdges, cv::Size(3,3),5);
+    cv::imshow("extractedEdgesx2",extractedEdges);
+
+    // Apply erosion operator.
+    cv::Mat erodedMask;
+    cv::erode(extractedEdges,erodedMask,cv::Mat());
+    cv::imshow("erodedMask",erodedMask);
+
+    
+
+    //cv::Mat SobelGrad = YChannel;
+
+    //cv::Mat grad = extractedEdges;
+    //int scale = 1;
+    //int delta = 0;
+    //int ddepth = CV_16U;
     //cv::Mat sx = extractedEdges;
     //cv::Mat sy = extractedEdges; 
-    //cv::Sobel(extractedEdges,sx,CV_32F,1,0,3);
-    //cv::Sobel(extractedEdges,sy,CV_32F,0,0,3);
+    //cv::Mat abs_sx = extractedEdges;
+    //cv::Mat abs_sy = extractedEdges; 
 
+    //cv::GaussianBlur( ALD, SobelGrad, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
+    //cv::Sobel(SobelGrad,sx,ddepth,1,0,3,scale,delta,cv::BORDER_DEFAULT);
+    //cv::Sobel(SobelGrad,sy,ddepth,0,1,3,scale,delta,cv::BORDER_DEFAULT);
+    //cv::convertScaleAbs( sx, abs_sx );
+    //cv::convertScaleAbs( sy, abs_sy );
+    //cv::addWeighted( abs_sx, 0.5, abs_sy, 0.5, 0, grad );
+    //cv::imshow("gradientMap",grad);
     //cv::imshow("sx",sx);
+    //cv::imshow("sy",sy);
     
-//    cv::Mat gradientMap = getGradient(extractedEdges);
-//    imshow("gradientMap",gradientMap);
+    //cv::Mat gradientMap = getGradient(extractedEdges);
+    //cv::imshow("gradientMap",gradientMap);
 
     // Create texture image.
     //cv::Mat texture = ALD - sharpenFilter /*.inv(CV_B)*/;
     //cv::imshow("texture",texture);
     
     //implement HR gradient smoothing.
-     
 
     //sharpen
     //cv::Mat tmp;
-    //cv::GaussianBlur(sharpenFilter, tmp, cv::Size(5,5), 5);
-    //cv::addWeighted(sharpenFilter, 1.5, tmp, -0.5, 0, sharpenFilter);
+    //cv::GaussianBlur(grad, tmp, cv::Size(5,5), 5);
+    //cv::addWeighted(grad, 1.5, tmp, -0.5, 0, grad);
+    //cv::imshow("gradientMap_sharp",grad);
 	
 //  int kernel_size = 3;
 //    int scale = 1;
 //      int delta = 0;
 //        int ddepth = CV_16S;
-//
+////
 //	cv::Mat dst,abs_dst;
-//	//cv::GaussianBlur( extractedEdges, extractedEdges, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
+////	//cv::GaussianBlur( extractedEdges, extractedEdges, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
 //	cv::Laplacian( extractedEdges, dst, ddepth, kernel_size, scale, delta, cv::BORDER_DEFAULT );
 //	cv::convertScaleAbs( dst, abs_dst );
-//	//cv::GaussianBlur( abs_dst, abs_dst, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
+//	cv::GaussianBlur( abs_dst, abs_dst, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
 //	cv::imshow("Lapacian",abs_dst);
+
 
     //Assign modified Y channel back to vector
     YUVChannels[Y] = YChannel;  
@@ -265,19 +292,28 @@ private:
     int gradMagnitude = 0;
     int xgrad = 0;
     int ygrad = 0;
-    if ( (p.x - 1 >= 0) &&
-	 (p.y - 1 >= 0) &&
-	 (p.x + 1 < img.cols) &&
-	 (p.y + 1 < img.rows) )
+//    if ( (p.x - 1 >= 0) &&
+//	 (p.y - 1 >= 0) &&
+//	 (p.x + 1 < img.cols) &&
+//	 (p.y + 1 < img.rows) )
     {
       // do xy gradient 
       //xgrad = ((int)img.at<unsigned char>(p.x + 1, p.y)) - ((int)img.at<unsigned char>(p.x - 1, p.y)) ;
       //ygrad = ((int)img.at<unsigned char>(p.x, p.y + 1)) - ((int)img.at<unsigned char>(p.x, p.y - 1)) ;
-      xgrad = ((int)img.at<unsigned char>(p.y , p.x + 1)) - ((int)img.at<unsigned char>( p.y , p.x - 1)) ;
+
+      //xgrad = ((int)img.at<unsigned char>(p.y , p.x + 1)) - ((int)img.at<unsigned char>( p.y , p.x - 1)) ;
+      //ygrad = ((int)img.at<unsigned char>(p.y + 1 , p.x )) - ((int)img.at<unsigned char>(p.y - 1 , p.x)) ;
+      
+      xgrad = ((int)img.at<unsigned char>(p.y , p.x + 1)) - ((int)img.at<unsigned char>(p.y , p.x - 1)) ;
       ygrad = ((int)img.at<unsigned char>(p.y + 1 , p.x )) - ((int)img.at<unsigned char>(p.y - 1 , p.x)) ;
-      //gradMagnitude = cv::sqrt( (xgrad*xgrad) + (ygrad*ygrad) ); 
+
+
+      gradMagnitude = cv::sqrt( (xgrad*xgrad) + (ygrad*ygrad) ); 
+      //std::cout << xgrad << "," << ygrad << ":";
+     // std::cout << gradMagnitude << ":";
+
       //cv::magnitude(xgrad,ygrad,gradMagnitude); 
-      gradMagnitude = xgrad;
+      //gradMagnitude = xgrad;
     }
     return gradMagnitude; 
   }
@@ -291,7 +327,7 @@ private:
       for (int x = 0; x < img.cols; x++) 
       {
 	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
-	grad.at<unsigned char>(y,x) = calculateGrad(img,cv::Point(x,y));
+	grad.at<unsigned char>(y,x) = calculateGrad(img, cv::Point(x,y));
       }
     }
 

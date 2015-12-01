@@ -144,55 +144,9 @@ public:
 
 
 
-    //cv::Mat SobelGrad = YChannel;
-
-    //cv::Mat grad = extractedEdges;
-    //int scale = 1;
-    //int delta = 0;
-    //int ddepth = CV_16U;
-    //cv::Mat sx = extractedEdges;
-    //cv::Mat sy = extractedEdges; 
-    //cv::Mat abs_sx = extractedEdges;
-    //cv::Mat abs_sy = extractedEdges; 
-
-    //cv::GaussianBlur( ALD, SobelGrad, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
-    //cv::Sobel(SobelGrad,sx,ddepth,1,0,3,scale,delta,cv::BORDER_DEFAULT);
-    //cv::Sobel(SobelGrad,sy,ddepth,0,1,3,scale,delta,cv::BORDER_DEFAULT);
-    //cv::convertScaleAbs( sx, abs_sx );
-    //cv::convertScaleAbs( sy, abs_sy );
-    //cv::addWeighted( abs_sx, 0.5, abs_sy, 0.5, 0, grad );
-    //cv::imshow("gradientMap",grad);
-    //cv::imshow("sx",sx);
-    //cv::imshow("sy",sy);
+    // Texture code goes here. //////////////////////////////////////////////////////////////////////
     
-    //cv::Mat gradientMap = getGradient(extractedEdges);
-    //cv::imshow("gradientMap",gradientMap);
-
-    // Create texture image.
-    //cv::Mat texture = ALD - sharpenFilter /*.inv(CV_B)*/;
-    //cv::imshow("texture",texture);
     
-    //implement HR gradient smoothing.
-
-    //sharpen
-    //cv::Mat tmp;
-    //cv::GaussianBlur(grad, tmp, cv::Size(5,5), 5);
-    //cv::addWeighted(grad, 1.5, tmp, -0.5, 0, grad);
-    //cv::imshow("gradientMap_sharp",grad);
-	
-//  int kernel_size = 3;
-//    int scale = 1;
-//      int delta = 0;
-//        int ddepth = CV_16S;
-////
-//	cv::Mat dst,abs_dst;
-////	//cv::GaussianBlur( extractedEdges, extractedEdges, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
-//	cv::Laplacian( extractedEdges, dst, ddepth, kernel_size, scale, delta, cv::BORDER_DEFAULT );
-//	cv::convertScaleAbs( dst, abs_dst );
-//	cv::GaussianBlur( abs_dst, abs_dst, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
-//	cv::imshow("Lapacian",abs_dst);
-
-
 
     //Assign modified Y channel back to vector
     YUVChannels[Y] = YChannel;  

@@ -79,8 +79,8 @@ public:
     cv::imshow("ALD",ALD);
     //YChannel = ALD;
     
-    cv::Mat grad = getGradient(ALD.clone());
-    imshow("gradi",grad);
+    cv::Mat gradient = getGradient(ALD.clone());
+    imshow("gradi",gradient);
 
     //float searchRadius = 10; // 5 pixels.
   
@@ -102,16 +102,17 @@ public:
     // Extract edges from ALD.
     cv::Mat extractMask;
     cv::Mat extractedEdges;
-    cv::adaptiveThreshold(ALD, extractMask, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 3, 3);
+    cv::adaptiveThreshold(ALD, extractMask, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 5, 1);
     cv::bitwise_not( extractMask, extractMask );
     cv::imshow("extractMask",extractMask);
-    YChannel.copyTo(extractedEdges,extractMask);
+    //YChannel.copyTo(extractedEdges,extractMask);
+    gradient.copyTo(extractedEdges,extractMask);
     cv::imshow("extractedEdges",extractedEdges);
 
     // Resize image and blur it.
     cv::Size imageSize(0,0);
     cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
-    cv::blur(extractedEdges, extractedEdges, cv::Size(5,5));
+    cv::blur(extractedEdges, extractedEdges, cv::Size(3,3));
     cv::imshow("extractedEdgesx2",extractedEdges);
 
     // Apply erosion operator.
@@ -120,81 +121,40 @@ public:
     cv::imshow("erodedExtractedEdges",erodedExtractedEdges);
 
     // Reblur and downsample. 
-    cv::blur(erodedExtractedEdges, erodedExtractedEdges, cv::Size(5,5));
+    cv::blur(erodedExtractedEdges, erodedExtractedEdges, cv::Size(3,3));
     cv::imshow("erodedEE_sharp", erodedExtractedEdges);
 	   
     cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
     cv::imshow("erodedEE_sharp_downsized", erodedExtractedEdges);
 
-    erodedExtractedEdges *= 2;
+    erodedExtractedEdges *= 4;
     cv::imshow("erodedEE_sharp_downsized * 2", erodedExtractedEdges);
     
       
 
     cv::Mat downsampledBlurred;
-    cv::blur(erodedExtractedEdges, downsampledBlurred, cv::Size(5,5));
+    cv::blur(erodedExtractedEdges, downsampledBlurred, cv::Size(3,3));
     cv::resize(downsampledBlurred,downsampledBlurred,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
     
     cv::Mat originalDiff = originalYChannel - downsampledBlurred;
 
     // Upscale and reblur.
     cv::resize(originalDiff,originalDiff,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
-    cv::blur(originalDiff, originalDiff, cv::Size(5,5));
-    originalDiff *= 0.2;
+    cv::blur(originalDiff, originalDiff, cv::Size(3,3));
+    //originalDiff *= 0.2;
 
-    cv::Mat finalEdgeResult = originalDiff + YChannel;
+    pow(gradient,2,gradient);
+    pow(erodedExtractedEdges,2,erodedExtractedEdges);
+    imshow("lol",erodedExtractedEdges - gradient);
+
+
+    // Iterative formula
+    cv::Mat finalEdgeResult = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient);
+    //cv::Mat finalEdgeResult = originalDiff + YChannel;
     cv::imshow("final",finalEdgeResult);
     //cv::imshow("ychane",YChannel);
 
 
-    
-    //cv::Mat SobelGrad = YChannel;
-
-    //cv::Mat grad = extractedEdges;
-    //int scale = 1;
-    //int delta = 0;
-    //int ddepth = CV_16U;
-    //cv::Mat sx = extractedEdges;
-    //cv::Mat sy = extractedEdges; 
-    //cv::Mat abs_sx = extractedEdges;
-    //cv::Mat abs_sy = extractedEdges; 
-
-    //cv::GaussianBlur( ALD, SobelGrad, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
-    //cv::Sobel(SobelGrad,sx,ddepth,1,0,3,scale,delta,cv::BORDER_DEFAULT);
-    //cv::Sobel(SobelGrad,sy,ddepth,0,1,3,scale,delta,cv::BORDER_DEFAULT);
-    //cv::convertScaleAbs( sx, abs_sx );
-    //cv::convertScaleAbs( sy, abs_sy );
-    //cv::addWeighted( abs_sx, 0.5, abs_sy, 0.5, 0, grad );
-    //cv::imshow("gradientMap",grad);
-    //cv::imshow("sx",sx);
-    //cv::imshow("sy",sy);
-    
-    //cv::Mat gradientMap = getGradient(extractedEdges);
-    //cv::imshow("gradientMap",gradientMap);
-
-    // Create texture image.
-    //cv::Mat texture = ALD - sharpenFilter /*.inv(CV_B)*/;
-    //cv::imshow("texture",texture);
-    
-    //implement HR gradient smoothing.
-
-    //sharpen
-    //cv::Mat tmp;
-    //cv::GaussianBlur(grad, tmp, cv::Size(5,5), 5);
-    //cv::addWeighted(grad, 1.5, tmp, -0.5, 0, grad);
-    //cv::imshow("gradientMap_sharp",grad);
-	
-//  int kernel_size = 3;
-//    int scale = 1;
-//      int delta = 0;
-//        int ddepth = CV_16S;
-////
-//	cv::Mat dst,abs_dst;
-////	//cv::GaussianBlur( extractedEdges, extractedEdges, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
-//	cv::Laplacian( extractedEdges, dst, ddepth, kernel_size, scale, delta, cv::BORDER_DEFAULT );
-//	cv::convertScaleAbs( dst, abs_dst );
-//	cv::GaussianBlur( abs_dst, abs_dst, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
-//	cv::imshow("Lapacian",abs_dst);
 
 
 

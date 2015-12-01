@@ -90,10 +90,24 @@ public:
     //cv::imshow("canny",outFrames[0]);
 
     // Extract edges from ALD.
-    cv::Mat sharpenFilter;
-    cv::adaptiveThreshold(ALD,sharpenFilter,255,CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY,5,4.4);
-    //cv::bitwise_not( sharpenFilter, sharpenFilter );
-    cv::imshow("sharpenFilter",sharpenFilter);
+    cv::Mat extractMask;
+    cv::Mat extractedEdges;
+    cv::adaptiveThreshold(ALD,extractMask,255,CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY, 9, 4);
+    cv::bitwise_not( extractMask, extractMask );
+    cv::imshow("extractMask",extractMask);
+    YChannel.copyTo(extractedEdges,extractMask);
+
+    cv::imshow("extractedEdges",extractedEdges);
+
+    //cv::Mat sx = extractedEdges;
+    //cv::Mat sy = extractedEdges; 
+    //cv::Sobel(extractedEdges,sx,CV_32F,1,0,3);
+    //cv::Sobel(extractedEdges,sy,CV_32F,0,0,3);
+
+    //cv::imshow("sx",sx);
+    
+//    cv::Mat gradientMap = getGradient(extractedEdges);
+//    imshow("gradientMap",gradientMap);
 
     // Create texture image.
     //cv::Mat texture = ALD - sharpenFilter /*.inv(CV_B)*/;
@@ -103,9 +117,9 @@ public:
      
 
     //sharpen
-    cv::Mat tmp;
-    cv::GaussianBlur(sharpenFilter, tmp, cv::Size(5,5), 5);
-    cv::addWeighted(sharpenFilter, 1.5, tmp, -0.5, 0, sharpenFilter);
+    //cv::Mat tmp;
+    //cv::GaussianBlur(sharpenFilter, tmp, cv::Size(5,5), 5);
+    //cv::addWeighted(sharpenFilter, 1.5, tmp, -0.5, 0, sharpenFilter);
 	
 //  int kernel_size = 3;
 //    int scale = 1;
@@ -113,12 +127,11 @@ public:
 //        int ddepth = CV_16S;
 //
 //	cv::Mat dst,abs_dst;
-//	cv::GaussianBlur( YChannel, YChannel, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
-//	cv::Laplacian( YChannel, dst, ddepth, kernel_size, scale, delta, cv::BORDER_DEFAULT );
+//	//cv::GaussianBlur( extractedEdges, extractedEdges, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
+//	cv::Laplacian( extractedEdges, dst, ddepth, kernel_size, scale, delta, cv::BORDER_DEFAULT );
 //	cv::convertScaleAbs( dst, abs_dst );
-//	cv::GaussianBlur( abs_dst, abs_dst, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
+//	//cv::GaussianBlur( abs_dst, abs_dst, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
 //	cv::imshow("Lapacian",abs_dst);
-
 
     //Assign modified Y channel back to vector
     YUVChannels[Y] = YChannel;  
@@ -258,19 +271,27 @@ private:
 	 (p.y + 1 < img.rows) )
     {
       // do xy gradient 
+      //xgrad = ((int)img.at<unsigned char>(p.x + 1, p.y)) - ((int)img.at<unsigned char>(p.x - 1, p.y)) ;
+      //ygrad = ((int)img.at<unsigned char>(p.x, p.y + 1)) - ((int)img.at<unsigned char>(p.x, p.y - 1)) ;
+      xgrad = ((int)img.at<unsigned char>(p.y , p.x + 1)) - ((int)img.at<unsigned char>( p.y , p.x - 1)) ;
+      ygrad = ((int)img.at<unsigned char>(p.y + 1 , p.x )) - ((int)img.at<unsigned char>(p.y - 1 , p.x)) ;
+      //gradMagnitude = cv::sqrt( (xgrad*xgrad) + (ygrad*ygrad) ); 
+      //cv::magnitude(xgrad,ygrad,gradMagnitude); 
+      gradMagnitude = xgrad;
     }
-   return gradMagnitude; 
+    return gradMagnitude; 
   }
 
   cv::Mat getGradient(cv::Mat img)
   {
-    cv::Mat grad;
-    
-    for (int y = 0; y < img.rows;y++) 
+    cv::Mat grad = img;
+
+    for (int y = 0; y < img.rows; y++) 
     {
-      for (int x = 0; x < img.cols;x++) 
+      for (int x = 0; x < img.cols; x++) 
       {
-	//calculateGrad()
+	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+	grad.at<unsigned char>(y,x) = calculateGrad(img,cv::Point(x,y));
       }
     }
 

@@ -48,124 +48,111 @@ public:
 
     std::cout << "Total # Frames: " << inFrames.size() << std::endl;
 
-    for (unsigned long int i = 0; i < inFrames.size(); i++)
+    for (unsigned long int i = 0; i < inFrames.size()/100; i++)
     {
       std::cout << "\r" << "Scaling Frame: " << i+1 << "/" << inFrames.size();
       outFrames.push_back(inFrames[i]);
       cv::resize(outFrames[i],outFrames[i],outImageSize,scaleFactor,scaleFactor,CV_INTER_CUBIC);
       //std::cout << i << " " << inFrames[i].rows << " ";;
+      //sharpenEdges(i);
     }
     std::cout << "\n";
    
-    // grab original Y channel.
-    cv::Mat YUVIn = inFrames[0];
-    std::vector<cv::Mat> originalYUVChannels = convertToYUV(YUVIn);
-    cv::Mat originalYChannel = originalYUVChannels[Y];
+    {
+   // sharpenEdges();
+    //// grab original Y channel.
+    //cv::Mat YUVIn = inFrames[0];
+    //std::vector<cv::Mat> originalYUVChannels = convertToYUV(YUVIn);
+    //cv::Mat originalYChannel = originalYUVChannels[Y];
 
-    // grab bicubic resized Y channel.
-    cv::Mat YUVOut = outFrames[0];
-    cv::imshow("OriginalRGB",YUVOut);
-    std::vector<cv::Mat> YUVChannels = convertToYUV(YUVOut);
+    //// grab bicubic resized Y channel.
+    //cv::Mat YUVOut = outFrames[0];
+    //cv::imshow("OriginalRGB",YUVOut);
+    //std::vector<cv::Mat> YUVChannels = convertToYUV(YUVOut);
    
-    cv::imshow("YUVOut",YUVOut);
+    //cv::imshow("YUVOut",YUVOut);
 
-    cv::Mat YChannel = YUVChannels[Y];
-    cv::imshow("Ychannel", YChannel);
-    // Use YChannel for rest of algorthm. 
+    //cv::Mat YChannel = YUVChannels[Y];
+    //cv::imshow("Ychannel", YChannel);
+    //// Use YChannel for rest of algorthm. 
 
-    // Calculate ALD.
-    cv::Mat YChannelCopy = YChannel.clone();
-    cv::Mat ALD = getALD(YChannelCopy,15);
-    cv::imshow("ALD",ALD);
-    //YChannel = ALD;
-    
-    cv::Mat gradient = getGradient(ALD.clone());
-    imshow("gradi",gradient);
-
-    //float searchRadius = 10; // 5 pixels.
-  
-    //for (int y = 0; y < YChannel.rows; y++)
-    //{
-    //  for (int x = 0; x < YChannel.cols; x++)
-    //  {
-    //    //setPixel(YUV,x,y,(int)calculateALD(YUV, cv::Point(x,y), searchRadius));
-    //    YChannel.at<unsigned char>(y,x) = (int)calculateALD(YChannel, cv::Point(x,y), searchRadius);
-    //    //std::cout << (int)ALD.at<unsigned char>(y,x) << ":";
-    //  }
-    //}
-    
-    //cv::Mat canny=YChannel;
-    //cv::Canny(YChannel,canny,50,90);
-    //cv::imshow("canny",outFrames[0]);
-
-
-    // Extract edges from ALD.
-    cv::Mat extractMask;
-    cv::Mat extractedEdges;
-    cv::adaptiveThreshold(ALD, extractMask, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 5, 1);
-    cv::bitwise_not( extractMask, extractMask );
-    cv::imshow("extractMask",extractMask);
-    //YChannel.copyTo(extractedEdges,extractMask);
-    gradient.copyTo(extractedEdges,extractMask);
-    cv::imshow("extractedEdges",extractedEdges);
-
-    // Resize image and blur it.
-    cv::Size imageSize(0,0);
-    cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
-    cv::blur(extractedEdges, extractedEdges, cv::Size(3,3));
-    cv::imshow("extractedEdgesx2",extractedEdges);
-
-    // Apply erosion operator.
-    cv::Mat erodedExtractedEdges;
-    cv::erode(extractedEdges,erodedExtractedEdges,cv::Mat());
-    cv::imshow("erodedExtractedEdges",erodedExtractedEdges);
-
-    // Reblur and downsample. 
-    cv::blur(erodedExtractedEdges, erodedExtractedEdges, cv::Size(3,3));
-    cv::imshow("erodedEE_sharp", erodedExtractedEdges);
-	   
-    cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
-    cv::imshow("erodedEE_sharp_downsized", erodedExtractedEdges);
-
-    erodedExtractedEdges *= 4;
-    cv::imshow("erodedEE_sharp_downsized * 2", erodedExtractedEdges);
-    
-      
-
-    cv::Mat downsampledBlurred;
-    cv::blur(erodedExtractedEdges, downsampledBlurred, cv::Size(3,3));
-    cv::resize(downsampledBlurred,downsampledBlurred,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
-    
-    cv::Mat originalDiff = originalYChannel - downsampledBlurred;
-
-    // Upscale and reblur.
-    cv::resize(originalDiff,originalDiff,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
-    cv::blur(originalDiff, originalDiff, cv::Size(3,3));
-    //originalDiff *= 0.2;
-
-    pow(gradient,2,gradient);
-    pow(erodedExtractedEdges,2,erodedExtractedEdges);
-    imshow("lol",erodedExtractedEdges - gradient);
-
-
-    // Iterative formula
-    cv::Mat finalEdgeResult = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient);
-    //cv::Mat finalEdgeResult = originalDiff + YChannel;
-    cv::imshow("final",finalEdgeResult);
-    //cv::imshow("ychane",YChannel);
+    //// Calculate ALD.
+    //cv::Mat YChannelCopy = YChannel.clone();
+    //cv::Mat ALD = getALD(YChannelCopy,15);
+    //cv::imshow("ALD",ALD);
+    ////YChannel = ALD;
+    //
+    //cv::Mat gradient = getGradient(ALD.clone());
+    //imshow("Gradient",gradient);
 
 
 
+    //// Extract edges from ALD.
+    //cv::Mat extractMask;
+    //cv::Mat extractedEdges;
+    //cv::adaptiveThreshold(ALD, extractMask, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 5, 1);
+    //cv::bitwise_not( extractMask, extractMask );
+    //cv::imshow("extractMask",extractMask);
+    ////YChannel.copyTo(extractedEdges,extractMask);
+    //gradient.copyTo(extractedEdges,extractMask);
+    //cv::imshow("extractedEdges",extractedEdges);
+
+    //// Resize image and blur it.
+    //cv::Size imageSize(0,0);
+    //cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
+    //cv::blur(extractedEdges, extractedEdges, cv::Size(3,3));
+    //cv::imshow("extractedEdgesx2",extractedEdges);
+
+    //// Apply erosion operator.
+    //cv::Mat erodedExtractedEdges;
+    //cv::erode(extractedEdges,erodedExtractedEdges,cv::Mat());
+    //cv::imshow("erodedExtractedEdges",erodedExtractedEdges);
+
+    //// Reblur and downsample. 
+    //cv::blur(erodedExtractedEdges, erodedExtractedEdges, cv::Size(3,3));
+    //cv::imshow("erodedEE_sharp", erodedExtractedEdges);
+    //       
+    //cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
+    //cv::imshow("erodedEE_sharp_downsized", erodedExtractedEdges);
+
+    //erodedExtractedEdges *= 4;
+    //cv::imshow("erodedEE_sharp_downsized * 2", erodedExtractedEdges);
+    //
+    //  
+
+    //cv::Mat downsampledBlurred;
+    //cv::blur(erodedExtractedEdges, downsampledBlurred, cv::Size(3,3));
+    //cv::resize(downsampledBlurred,downsampledBlurred,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
+    //
+    //cv::Mat originalDiff = originalYChannel - downsampledBlurred;
+
+    //// Upscale and reblur.
+    //cv::resize(originalDiff,originalDiff,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
+    //cv::blur(originalDiff, originalDiff, cv::Size(3,3));
+    ////originalDiff *= 0.2;
+
+    //pow(gradient,2,gradient);
+    //pow(erodedExtractedEdges,2,erodedExtractedEdges);
+    //imshow("lol",erodedExtractedEdges - gradient);
 
 
-    //Assign modified Y channel back to vector
-    //YUVChannels[Y] = YChannel;  
-    YUVChannels[Y] = finalEdgeResult;  
+    //// Iterative formula
+    //cv::Mat finalEdgeResult = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient);
+    ////cv::Mat finalEdgeResult = originalDiff + YChannel;
+    //cv::imshow("final",finalEdgeResult);
+    ////cv::imshow("ychane",YChannel);
 
-    // convert back to RGB format.
-    cv::Mat RGB = convertToRGB(YUVChannels);
-    cv::imshow("RGB",RGB);
-    //outFrames[i] = RGB;
+
+
+    ////Assign modified Y channel back to vector
+    ////YUVChannels[Y] = YChannel;  
+    //YUVChannels[Y] = finalEdgeResult;  
+
+    //// convert back to RGB format.
+    //cv::Mat RGB = convertToRGB(YUVChannels);
+    //cv::imshow("RGB",RGB);
+    ////outFrames[i] = RGB;
+    }
   }  
   
   void writeVideo(char* outFileName)
@@ -199,12 +186,14 @@ public:
     double avgPSNR = 0;
     cv::Size outImageSize(0,0);
 
-    for (unsigned long int i = 0; i < inFrames.size(); i++ ) 
+    for (unsigned long int i = 0; i < inFrames.size()/100; i++ ) 
     {
+      // Downscale the output to the original image size, 
+      // and do PSNR against original image and downscaled output image.
       cv::resize(outFrames[i],outFrames[i],outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_NN);
       avgPSNR += getPSNR(inFrames[i],outFrames[i]);
     }
-    avgPSNR /= inFrames.size();
+    avgPSNR /= inFrames.size()/100;
 
     std::cout << "Average PSNR per frame: " << avgPSNR << std::endl;
   }
@@ -381,6 +370,103 @@ private:
       }
     }
     return ALD;
+  }
+
+  void sharpenEdges(int i)
+  {
+    // grab original Y channel.
+    cv::Mat YUVIn = inFrames[i];
+    std::vector<cv::Mat> originalYUVChannels = convertToYUV(YUVIn);
+    cv::Mat originalYChannel = originalYUVChannels[Y];
+
+    // grab bicubic resized Y channel.
+    cv::Mat YUVOut = outFrames[i];
+    cv::imshow("OriginalRGB",YUVOut);
+    std::vector<cv::Mat> YUVChannels = convertToYUV(YUVOut);
+   
+    cv::imshow("YUVOut",YUVOut);
+
+    cv::Mat YChannel = YUVChannels[Y];
+    cv::imshow("Ychannel", YChannel);
+    // Use YChannel for rest of algorthm. 
+
+    // Calculate ALD.
+    cv::Mat YChannelCopy = YChannel.clone();
+    cv::Mat ALD = getALD(YChannelCopy,15);
+    cv::imshow("ALD",ALD);
+    //YChannel = ALD;
+    
+    cv::Mat gradient = getGradient(ALD.clone());
+    imshow("Gradient",gradient);
+
+
+
+    // Extract edges from ALD.
+    cv::Mat extractMask;
+    cv::Mat extractedEdges;
+    cv::adaptiveThreshold(ALD, extractMask, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 5, 1);
+    cv::bitwise_not( extractMask, extractMask );
+    cv::imshow("extractMask",extractMask);
+    //YChannel.copyTo(extractedEdges,extractMask);
+    gradient.copyTo(extractedEdges,extractMask);
+    cv::imshow("extractedEdges",extractedEdges);
+
+    // Resize image and blur it.
+    cv::Size imageSize(0,0);
+    cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
+    cv::blur(extractedEdges, extractedEdges, cv::Size(3,3));
+    cv::imshow("extractedEdgesx2",extractedEdges);
+
+    // Apply erosion operator.
+    cv::Mat erodedExtractedEdges;
+    cv::erode(extractedEdges,erodedExtractedEdges,cv::Mat());
+    cv::imshow("erodedExtractedEdges",erodedExtractedEdges);
+
+    // Reblur and downsample. 
+    cv::blur(erodedExtractedEdges, erodedExtractedEdges, cv::Size(3,3));
+    cv::imshow("erodedEE_sharp", erodedExtractedEdges);
+	   
+    cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
+    cv::imshow("erodedEE_sharp_downsized", erodedExtractedEdges);
+
+    erodedExtractedEdges *= 4;
+    cv::imshow("erodedEE_sharp_downsized * 2", erodedExtractedEdges);
+    
+      
+
+    cv::Mat downsampledBlurred;
+    cv::blur(erodedExtractedEdges, downsampledBlurred, cv::Size(3,3));
+    cv::resize(downsampledBlurred,downsampledBlurred,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
+    
+    cv::Mat originalDiff = originalYChannel - downsampledBlurred;
+
+    // Upscale and reblur.
+    cv::resize(originalDiff,originalDiff,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
+    cv::blur(originalDiff, originalDiff, cv::Size(3,3));
+    //originalDiff *= 0.2;
+
+    pow(gradient,2,gradient);
+    pow(erodedExtractedEdges,2,erodedExtractedEdges);
+    imshow("lol",erodedExtractedEdges - gradient);
+
+
+    // Iterative formula
+    cv::Mat finalEdgeResult = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient);
+    //cv::Mat finalEdgeResult = originalDiff + YChannel;
+    cv::imshow("final",finalEdgeResult);
+    //cv::imshow("ychane",YChannel);
+
+     
+
+    //Assign modified Y channel back to vector
+    //YUVChannels[Y] = YChannel;  
+    YUVChannels[Y] = finalEdgeResult;  
+
+    // convert back to RGB format.
+    cv::Mat RGB = convertToRGB(YUVChannels);
+    cv::imshow("RGB",RGB);
+    //outFrames[i] = RGB;
+
   }
 
   // Reference this.

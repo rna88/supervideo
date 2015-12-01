@@ -100,16 +100,26 @@ public:
 
     // Resize image and blur it.
     cv::Size imageSize(0,0);
-    cv::resize(extractedEdges,extractedEdges,imageSize,2,2,CV_INTER_LINEAR);
+    cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_LINEAR);
     cv::GaussianBlur(extractedEdges, extractedEdges, cv::Size(3,3),5);
     cv::imshow("extractedEdgesx2",extractedEdges);
 
     // Apply erosion operator.
-    cv::Mat erodedMask;
-    cv::erode(extractedEdges,erodedMask,cv::Mat());
-    cv::imshow("erodedMask",erodedMask);
+    cv::Mat erodedExtractedEdges;
+    cv::erode(extractedEdges,erodedExtractedEdges,cv::Mat());
+    cv::imshow("erodedExtractedEdges",erodedExtractedEdges);
 
-    
+    // Sharpen and downsample. 
+    cv::Mat tmp;
+    cv::GaussianBlur(erodedExtractedEdges, tmp, cv::Size(5,5), 5);
+    cv::addWeighted(erodedExtractedEdges, 1.5, tmp, -0.5, 0, erodedExtractedEdges);
+    cv::imshow("erodedEE_sharp", erodedExtractedEdges);
+	   
+    cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_LINEAR);
+    cv::imshow("erodedEE_sharp_downsized", erodedExtractedEdges);
+
+    erodedExtractedEdges*=2;
+    cv::imshow("erodedEE_sharp_downsized * 2", erodedExtractedEdges);
 
     //cv::Mat SobelGrad = YChannel;
 

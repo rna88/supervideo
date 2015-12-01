@@ -57,6 +57,9 @@ public:
     }
     std::cout << "\n";
    
+    cv::Mat YUVIn = inFrames[0];
+    std::vector<cv::Mat> originalYUVChannels = convertToYUV(YUVIn);
+    cv::Mat originalYChannel = originalYUVChannels[Y];
 
     cv::Mat YUVOut = outFrames[0];
     cv::imshow("OriginalRGB",YUVOut);
@@ -88,19 +91,20 @@ public:
     //cv::Canny(YChannel,canny,50,90);
     //cv::imshow("canny",outFrames[0]);
 
+
     // Extract edges from ALD.
     cv::Mat extractMask;
     cv::Mat extractedEdges;
     cv::adaptiveThreshold(ALD, extractMask, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 3, 3);
     cv::bitwise_not( extractMask, extractMask );
-//    cv::GaussianBlur(extractMask, extractMask, cv::Size(3,3),5);
+    //cv::GaussianBlur(extractMask, extractMask, cv::Size(3,3),5);
     cv::imshow("extractMask",extractMask);
     YChannel.copyTo(extractedEdges,extractMask);
     cv::imshow("extractedEdges",extractedEdges);
 
     // Resize image and blur it.
     cv::Size imageSize(0,0);
-    cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_LINEAR);
+    cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
     cv::GaussianBlur(extractedEdges, extractedEdges, cv::Size(3,3),5);
     cv::imshow("extractedEdgesx2",extractedEdges);
 
@@ -115,11 +119,30 @@ public:
     cv::addWeighted(erodedExtractedEdges, 1.5, tmp, -0.5, 0, erodedExtractedEdges);
     cv::imshow("erodedEE_sharp", erodedExtractedEdges);
 	   
-    cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_LINEAR);
+    cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
     cv::imshow("erodedEE_sharp_downsized", erodedExtractedEdges);
 
-    erodedExtractedEdges*=2;
+    erodedExtractedEdges *= 2;
     cv::imshow("erodedEE_sharp_downsized * 2", erodedExtractedEdges);
+    
+      
+
+    cv::Mat downsampledBlurred;
+    cv::GaussianBlur(erodedExtractedEdges, downsampledBlurred, cv::Size(5,5), 5);
+    cv::resize(downsampledBlurred,downsampledBlurred,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_NN);
+    
+    cv::Mat originalDiff = originalYChannel - downsampledBlurred;
+
+    // Upscale and sharpen.
+    cv::resize(originalDiff,originalDiff,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
+    cv::GaussianBlur(originalDiff, tmp, cv::Size(5,5), 5);
+    cv::addWeighted(originalDiff, 1.5, tmp, -0.5, 0, originalDiff);
+    originalDiff *= 0.2;
+
+    cv::Mat finalEdgeResult = originalDiff + YChannel;
+    cv::imshow("final",finalEdgeResult);
+
+
 
     //cv::Mat SobelGrad = YChannel;
 
@@ -168,6 +191,7 @@ public:
 //	cv::convertScaleAbs( dst, abs_dst );
 //	cv::GaussianBlur( abs_dst, abs_dst, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
 //	cv::imshow("Lapacian",abs_dst);
+
 
 
     //Assign modified Y channel back to vector

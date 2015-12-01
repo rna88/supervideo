@@ -56,6 +56,7 @@ public:
       //std::cout << i << " " << inFrames[i].rows << " ";;
     }
     std::cout << "\n";
+   
 
 
     cv::Mat YUVOut = outFrames[0];
@@ -68,31 +69,65 @@ public:
     cv::imshow("Ychannel", YChannel);
     // Use YChannel for rest of algorthm. 
 
+    cv::Mat ALD = getALD(YChannel,15);
+    cv::imshow("ALD",ALD);
+    //YChannel = ALD;
     
-    float searchRadius = 10; // 5 pixels.
+    //float searchRadius = 10; // 5 pixels.
   
-    for (int y = 0; y < YChannel.rows; y++)
-    {
-      for (int x = 0; x < YChannel.cols; x++)
-      {
-        //setPixel(YUV,x,y,(int)calculateALD(YUV, cv::Point(x,y), searchRadius));
-        
-        YChannel.at<unsigned char>(y,x) = (int)calculateALD(YChannel, cv::Point(x,y), searchRadius);
-        //std::cout << (int)ALD.at<unsigned char>(y,x) << ":";
-      }
-    }
+    //for (int y = 0; y < YChannel.rows; y++)
+    //{
+    //  for (int x = 0; x < YChannel.cols; x++)
+    //  {
+    //    //setPixel(YUV,x,y,(int)calculateALD(YUV, cv::Point(x,y), searchRadius));
+    //    YChannel.at<unsigned char>(y,x) = (int)calculateALD(YChannel, cv::Point(x,y), searchRadius);
+    //    //std::cout << (int)ALD.at<unsigned char>(y,x) << ":";
+    //  }
+    //}
+    
+    //cv::Mat canny=YChannel;
+    //cv::Canny(YChannel,canny,50,90);
+    //cv::imshow("canny",outFrames[0]);
+
+    // Extract edges from ALD.
+    cv::Mat sharpenFilter;
+    cv::adaptiveThreshold(ALD,sharpenFilter,255,CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY,5,4.4);
+    //cv::bitwise_not( sharpenFilter, sharpenFilter );
+    cv::imshow("sharpenFilter",sharpenFilter);
+
+    // Create texture image.
+    //cv::Mat texture = ALD - sharpenFilter /*.inv(CV_B)*/;
+    //cv::imshow("texture",texture);
+    
+    //implement HR gradient smoothing.
+     
+
+    //sharpen
+    cv::Mat tmp;
+    cv::GaussianBlur(sharpenFilter, tmp, cv::Size(5,5), 5);
+    cv::addWeighted(sharpenFilter, 1.5, tmp, -0.5, 0, sharpenFilter);
+	
+//  int kernel_size = 3;
+//    int scale = 1;
+//      int delta = 0;
+//        int ddepth = CV_16S;
+//
+//	cv::Mat dst,abs_dst;
+//	cv::GaussianBlur( YChannel, YChannel, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
+//	cv::Laplacian( YChannel, dst, ddepth, kernel_size, scale, delta, cv::BORDER_DEFAULT );
+//	cv::convertScaleAbs( dst, abs_dst );
+//	cv::GaussianBlur( abs_dst, abs_dst, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
+//	cv::imshow("Lapacian",abs_dst);
 
 
     //Assign modified Y channel back to vector
     YUVChannels[Y] = YChannel;  
-    cv::imshow("ALD",YChannel);
 
     // convert back to RGB format.
     cv::Mat RGB = convertToRGB(YUVChannels);
     cv::imshow("RGB",RGB);
     //outFrames[i] = RGB;
   }  
-
   
   void writeVideo(char* outFileName)
   {
@@ -211,6 +246,37 @@ private:
     return ALD;
   }
 
+  int calculateGrad(cv::Mat img, cv::Point p)
+  {
+    // TODO: Fix gradient calc so that edge pixels have non-zero value.
+    int gradMagnitude = 0;
+    int xgrad = 0;
+    int ygrad = 0;
+    if ( (p.x - 1 >= 0) &&
+	 (p.y - 1 >= 0) &&
+	 (p.x + 1 < img.cols) &&
+	 (p.y + 1 < img.rows) )
+    {
+      // do xy gradient 
+    }
+   return gradMagnitude; 
+  }
+
+  cv::Mat getGradient(cv::Mat img)
+  {
+    cv::Mat grad;
+    
+    for (int y = 0; y < img.rows;y++) 
+    {
+      for (int x = 0; x < img.cols;x++) 
+      {
+	//calculateGrad()
+      }
+    }
+
+    return grad;
+  }
+
   int findMin(cv::Mat& img,cv::Point p,int s,int t)
   {
     int min = 255;
@@ -245,6 +311,20 @@ private:
       }
     }
   } 
+
+  cv::Mat getALD(cv::Mat& imgY, int radius)
+  {
+    cv::Mat ALD = imgY;
+
+    for (int y = 0; y < ALD.rows; y++)
+    {
+      for (int x = 0; x < ALD.cols; x++)
+      {
+        ALD.at<unsigned char>(y,x) = (int)calculateALD(ALD, cv::Point(x,y), radius);
+      }
+    }
+    return ALD;
+  }
 
   // Reference this.
   double getPSNR(const cv::Mat& I1, const cv::Mat& I2)

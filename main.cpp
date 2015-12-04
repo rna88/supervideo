@@ -4,7 +4,7 @@
 #define Y 0
 #define SHOW_IMAGES 1
 const char* input = "lena.jpg";
-const int ALDRadius = 10;
+const int ALDRadius = 60;
 
 class supervideo
 {
@@ -109,9 +109,17 @@ public:
     cv::Mat inputBICUBIC;
     cv::resize(inputDownscaled,inputBICUBIC,outImageSize,scaleFactor,scaleFactor,CV_INTER_CUBIC);
 
+   // cv::Mat YUVInBi = inputDownscaled.clone();
+   // std::vector<cv::Mat> originalYUVChannels = convertToYUV(YUVIn);
+   // cv::Mat originalYChannel = originalYUVChannels[Y];
+   // // input bicubic is real resized bicubic?????????????????
+
+
+
     cv::Mat YUVIn = inputDownscaled.clone();
     std::vector<cv::Mat> originalYUVChannels = convertToYUV(YUVIn);
     cv::Mat originalYChannel = originalYUVChannels[Y];
+    // input bicubic is real resized bicubic?????????????????
 
    
     // grab bicubic resized Y channel.
@@ -231,21 +239,23 @@ public:
 //    //originalDiff *= 0.2;
 
 
-    // standin code - sharpens bicubic gradient map.
-//      gradient_bicubic = getGradient(YChannel);
-//      cv::Mat blurred; double sigma = 1, s_threshold = 5, amount = 1;
-//      GaussianBlur(gradient_bicubic, blurred, cv::Size(), sigma, sigma);
-//      cv::Mat lowContrastMask = abs(gradient_bicubic - blurred) < s_threshold;
-//      cv::Mat sharpened = gradient_bicubic*(1+amount) + blurred*(-amount);
-//      gradient_bicubic.copyTo(sharpened, lowContrastMask);
-//      cv::imshow("gb sharp", sharpened);
-//      cv::imshow("low contrast", lowContrastMask);
-//      gradient_bicubic = sharpened;
+  // standin code - sharpens bicubic gradient map.
+      //gradient_bicubic = getGradient(YChannel.clone());
+      //cv::Mat blurred; double sigma = 1, s_threshold = 5, amount = 1;
+      //GaussianBlur(gradient_bicubic, blurred, cv::Size(), sigma, sigma);
+      //cv::Mat lowContrastMask = abs(gradient_bicubic - blurred) < s_threshold;
+      //cv::Mat sharpened = gradient_bicubic*(1+amount) + blurred*(-amount);
+      //gradient_bicubic.copyTo(sharpened, lowContrastMask);
+#if SHOW_IMAGES
+      //cv::imshow("gb sharp", sharpened);
+      //cv::imshow("low contrast", lowContrastMask);
+#endif
+      //gradient_bicubic = sharpened;
 
-    pow(gradient_bicubic,2,gradient_bicubic);
+    //pow(gradient_bicubic,2,gradient_bicubic);
     pow(erodedExtractedEdges,2,erodedExtractedEdges);
 #if SHOW_IMAGES
-    imshow("Gradient - GradientMap",erodedExtractedEdges - gradient_bicubic);
+    //imshow("Gradient - GradientMap",erodedExtractedEdges - gradient_bicubic);
 #endif
 
 
@@ -254,39 +264,56 @@ public:
     
      
     //cv::Mat textureArea = finalTexture (orgYChannel, YChannel, scaleFactor);
-    
 
 
-
+    cv::Mat maskedY; 
+    cv::Mat downSampledExtractMask;
+    cv::resize(extractMask,downSampledExtractMask,cv::Size(0,0),1/scaleFactor,1/scaleFactor,CV_INTER_CUBIC);
+    multiply(originalYChannel,downSampledExtractMask,maskedY);
+    multiply(YChannel,extractMask,YChannel);
+    gradient_bicubic = getGradient(YChannel);
+    cv::Mat originalDiff;  
     // Iterative formula
     cv::Mat finalEdgeResult;
     int i = 0;
     while (i < 1)
     {
-      cv::Mat originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
-      YChannel = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
+      //cv::Mat originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
+      originalDiff = getDifference(maskedY, YChannel, blurKernel);
+      //cv::Mat orgYresize;
+      //cv::resize(originalYChannel,orgYresize,cv::Size(0,0),scaleFactor,scaleFactor);
+
+      pow(gradient_bicubic,2,gradient_bicubic);
+
+      //YChannel = orgYresize;
+      YChannel = YChannel + 0.2*originalDiff ;//+ 0.004*(erodedExtractedEdges - gradient_bicubic);
+      //YChannel = YChannel + 0.2*originalDiff + 0.004*(sharpened - gradient_bicubic);
+      
       //finalEdgeResult = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
       //cv::Mat finalEdgeResult = textureArea + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
       //cv::Mat finalEdgeResult = originalDiff + YChannel;
       
       gradient_bicubic = getGradient(YChannel);
-#if SHOW_IMAGES
-      cv::imshow("gradient_last_iteration",gradient_bicubic);
-#endif
-      //cv::GaussianBlur(gradient_bicubic,gradient_bicubic, cv::Size(3, 3), 3);
+     //cv::GaussianBlur(gradient_bicubic,gradient_bicubic, cv::Size(3, 3), 3);
       //cv::addWeighted(gradient_bicubic, 1.5, gradient_bicubic, -0.5, 0, gradient_bicubic);
       //cv::imshow("gradient_last_iteration_sharp",gradient_bicubic);
 
-
-            pow(gradient_bicubic,2,gradient_bicubic);
-
+//      cv::pow(gradient_bicubic,2,gradient_bicubic);
+//      cv::pow(sharpened,2,sharpened);
+//      cv::Mat gradientSubtractionResult;
+//
+//      cv::subtract(gradient_bicubic,sharpened,gradientSubtractionResult);
+//      //cv::absdiff(gradient_bicubic,sharpened,gradientSubtractionResult);
+//      cv::imshow("Gradient - GradientMap 2", gradientSubtractionResult);
       i++;
     }
     //cv::imshow("final",finalEdgeResult);
 #if SHOW_IMAGES
     cv::imshow("YchannelFinal",YChannel);
+      cv::imshow("gradient_last_iteration",gradient_bicubic);
+      cv::imshow("originalDiff",originalDiff);
 #endif
-
+ 
 //    std::vector<cv::Mat> orgY = convertToYUV(orgFrames[i]);
 //    cv::Mat orgYChannel = orgY[Y].clone();
     

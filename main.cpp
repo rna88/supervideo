@@ -543,11 +543,12 @@ public:
       //gradient_bicubic = sharpened;
 
 
-    cv::Mat showb;
+    cv::Mat showb = gradient_bicubic.clone();
+    cv::Mat showe = erodedExtractedEdges.clone();
     cv::Mat showMinus = erodedExtractedEdges.clone();
 
-    pow(erodedExtractedEdges,2,erodedExtractedEdges);
-    pow(gradient_bicubic,2,showb);
+    pow(showe,2,showe);
+    pow(showb,2,showb);
 
     //showMinus = (erodedExtractedEdges - showb);
     //cv::subtract(showb, erodedExtractedEdges,showMinus);
@@ -565,17 +566,19 @@ public:
   //    }
   //  }
     
-    cv::absdiff(erodedExtractedEdges,showb,showMinus);
+    cv::absdiff(showe,showb,showMinus);
     //showMinus*=50;
 #if SHOW_IMAGES
-    imshow("Gradient - GradientMap",erodedExtractedEdges - showb);
+    imshow("Gradient - GradientMap",showe - showb);
     imshow("Gradient - GradientMap2",showMinus);
-    imshow("Gradient",erodedExtractedEdges);
-    imshow("Gradient2",showb);
+    imshow("Gradient extract^2",showe);
+    imshow("Gradient org^2",showb);
 #endif
 
     cv::Mat originalDiff;  
     cv::Mat graDiff;  
+
+    cv::pow(erodedExtractedEdges,2,erodedExtractedEdges);
     
     // Iterative formula
     int i = 0;
@@ -590,7 +593,9 @@ public:
       //YChannel = YChannel;
       //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
       //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
-      YChannel = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
+      //YChannel = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
+      //YChannel = YChannel + 40.4*(erodedExtractedEdges - gradient_bicubic);
+      YChannel = YChannel + 0.20*originalDiff  + 0.004*(erodedExtractedEdges - gradient_bicubic);
 
       gradient_bicubic = getGradient(YChannel);
       i++;
@@ -613,7 +618,7 @@ public:
     cv::imshow("processedRGB",processedRGB);
 #endif
 
-    //std::cout << "bicubic PSNR: " << getPSNR(inputImage,inputBICUBIC) << "\n";
+   // std::cout << "bicubic PSNR: " << getPSNR(inputImage,inputBICUBIC) << "\n";
     std::cout << "bicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";
     std::cout << "sharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
   }
@@ -669,11 +674,12 @@ private:
     
     //cv::Mat originalDiff = originalYChannel - HREDownsampled;
     cv::Mat originalDiff = original - HREDownsampled;
+    cv::imshow("od",originalDiff);
 
     // Upscale and reblur.
     cv::resize(originalDiff,originalDiff, cv::Point(0,0), scaleFactor, scaleFactor, CV_INTER_CUBIC);
-    cv::blur(originalDiff, originalDiff, blurKernel);
-    //cv::GaussianBlur(originalDiff, originalDiff, blurKernel,1,1);
+   // cv::blur(originalDiff, originalDiff, blurKernel);
+    cv::GaussianBlur(originalDiff, originalDiff, blurKernel,1,1);
     //cv::imshow("Difference with original",originalDiff);
     
     return originalDiff;

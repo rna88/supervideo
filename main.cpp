@@ -544,13 +544,34 @@ public:
 
 
     cv::Mat showb;
-    cv::Mat showMinus;
+    cv::Mat showMinus = erodedExtractedEdges.clone();
+
     pow(erodedExtractedEdges,2,erodedExtractedEdges);
     pow(gradient_bicubic,2,showb);
-    showMinus = (erodedExtractedEdges - showb);
-    //cv::normalize(showb,showb,0,1,32);
+
+    //showMinus = (erodedExtractedEdges - showb);
+    //cv::subtract(showb, erodedExtractedEdges,showMinus);
+    
+  //  for (int y = 0; y < gradient_bicubic.rows; y++) 
+  //  {
+  //    for (int x = 0; x < gradient_bicubic.cols; x++) 
+  //    {
+  //      //grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+  //      showMinus.at<unsigned char>(y,x) = 100;
+  //      //erodedExtractedEdges.at<unsigned char>(y,x) = 0;
+  //      //erodedExtractedEdges.at<unsigned char>(y,x) - 
+  //      //gradient_bicubic.at<unsigned char>(y,x);
+  //      //std::cout << ".";	
+  //    }
+  //  }
+    
+    cv::absdiff(erodedExtractedEdges,showb,showMinus);
+    //showMinus*=50;
 #if SHOW_IMAGES
     imshow("Gradient - GradientMap",erodedExtractedEdges - showb);
+    imshow("Gradient - GradientMap2",showMinus);
+    imshow("Gradient",erodedExtractedEdges);
+    imshow("Gradient2",showb);
 #endif
 
     cv::Mat originalDiff;  

@@ -573,6 +573,7 @@ public:
     imshow("Gradient - GradientMap2",showMinus);
     imshow("Gradient extract^2",showe);
     imshow("Gradient org^2",showb);
+    //imshow("Gradient*Y",showMinus*YChannel.clone());
 #endif
 
     cv::Mat originalDiff;  
@@ -582,20 +583,23 @@ public:
     
     // Iterative formula
     int i = 0;
-    while (i < 50)
+    while (i < 1)
     {
-      originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
+      originalDiff = getDifference(originalYChannel.clone(), YChannel.clone(), blurKernel);
      // pow(erodedExtractedEdges,2,erodedExtractedEdges);
       pow(gradient_bicubic,2,gradient_bicubic);
       cv::absdiff(erodedExtractedEdges,gradient_bicubic,graDiff);
-
 
       //YChannel = YChannel;
       //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
       //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
       //YChannel = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
       //YChannel = YChannel + 40.4*(erodedExtractedEdges - gradient_bicubic);
-      YChannel = YChannel + 0.20*originalDiff  + 0.004*(erodedExtractedEdges - gradient_bicubic);
+      //YChannel = YChannel + 0.20*originalDiff  + 0.004*(erodedExtractedEdges - gradient_bicubic);
+      //YChannel = YChannel + 900*YChannel.mul(erodedExtractedEdges - gradient_bicubic,1);
+      YChannel = YChannel + 0.002*YChannel.mul(graDiff,1) - 0.002*originalDiff;
+      //YChannel = YChannel + YChannel.absdiff(originalDiff,1);
+      //YChannel = YChannel + YChannel.mul(graDiff,1);
 
       gradient_bicubic = getGradient(YChannel);
       i++;
@@ -606,6 +610,9 @@ public:
     cv::imshow("graDiff",graDiff);
     cv::imshow("gradient_last_iteration",gradient_bicubic);
     cv::imshow("originalDiff",originalDiff);
+    cv::imshow("grad*Y",YChannel.mul(graDiff,0.5));
+    //cv::subtract(YChannel,originalDiff,YChannel);
+    //cv::imshow("sum Y - OD",YChannel);
 #endif
  
     //Assign modified Y channel back to vector
@@ -670,17 +677,20 @@ private:
     //cv::blur(HREstimate, HREDownsampled, blurKernel);
     cv::GaussianBlur(HREstimate,HREDownsampled,blurKernel,1,1);
     cv::resize(HREDownsampled,HREDownsampled, cv::Point(0,0), 1/scaleFactor, 1/scaleFactor, CV_INTER_CUBIC);
-    //cv::imshow("extracted_edges_blurred",HREDownsampled);
+    cv::imshow("extracted_edges_blurred",HREDownsampled);
     
     //cv::Mat originalDiff = originalYChannel - HREDownsampled;
     cv::Mat originalDiff = original - HREDownsampled;
+    /////////////asdfffffffffffffffff
+    cv::absdiff(original,HREDownsampled,originalDiff);
+    cv::imshow("origna image",original);
     cv::imshow("od",originalDiff);
 
     // Upscale and reblur.
     cv::resize(originalDiff,originalDiff, cv::Point(0,0), scaleFactor, scaleFactor, CV_INTER_CUBIC);
    // cv::blur(originalDiff, originalDiff, blurKernel);
     cv::GaussianBlur(originalDiff, originalDiff, blurKernel,1,1);
-    //cv::imshow("Difference with original",originalDiff);
+    cv::imshow("Difference with original",originalDiff);
     
     return originalDiff;
   } 

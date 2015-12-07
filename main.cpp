@@ -1,5 +1,6 @@
 #include </usr/include/opencv2/opencv.hpp>
 #include <bitset>
+#include "textureSharpen.cpp"
 
 #define Y 0
 #define SHOW_IMAGES 1
@@ -422,7 +423,6 @@ public:
     // Use YChannel for rest of algorthm. 
 
 
-
     // Calculate ALD.
     cv::Mat YChannelCopy = YChannel.clone();
     cv::Mat ALD = getALD(YChannelCopy,ALDRadius);
@@ -520,7 +520,7 @@ public:
     //cv::GaussianBlur(extractedEdges,extractedEdges,blurKernel,1,1);
     //cv::GaussianBlur(erodedExtractedEdges,erodedExtractedEdges,cv::Size(11,11),1,1);
     //erodedExtractedEdges = sharpen(erodedExtractedEdges);
-    erodedExtractedEdges *= 1.0;  
+    erodedExtractedEdges *= 5000.0;  
 #if SHOW_IMAGES
     cv::imshow("erodedEE_sharp", erodedExtractedEdges);
 #endif
@@ -590,6 +590,7 @@ public:
       pow(gradient_bicubic,2,gradient_bicubic);
       cv::absdiff(erodedExtractedEdges,gradient_bicubic,graDiff);
       cv::imshow("gb-gh", gradient_bicubic - erodedExtractedEdges);
+      cv::imshow("gh-gb", erodedExtractedEdges - gradient_bicubic);
 
       //YChannel = YChannel;
       //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
@@ -611,8 +612,13 @@ public:
 
       //YChannel = YChannel + 0.2*originalDiff;
 
-      YChannel = YChannel + 0.004*(erodedExtractedEdges - gradient_bicubic);
+      //YChannel = YChannel + (erodedExtractedEdges - gradient_bicubic);
+      
+      // gradient compensated sharp edges.
+      //YChannel = YChannel + 400*(erodedExtractedEdges - gradient_bicubic);
 
+      
+      // NOTE: get difference currently modifies the YChannel result!
       originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
       gradient_bicubic = getGradient(YChannel);
       i++;
@@ -629,11 +635,17 @@ public:
     //cv::subtract(YChannel,originalDiff,YChannel);
     //cv::imshow("sum Y - OD",YChannel);
 #endif
- 
+    
+    
+    
+
+    //cv::GaussianBlur(YChannel,YChannel,cv::Size(11,11),1,1); 
+    //cv::imshow("YChannel1d blur", YChannel);
     //Assign modified Y channel back to vector
     //YUVChannels[Y] = YChannel;  
     YUVChannels[Y] = YChannel; 
     
+   getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
     // convert back to RGB format.
     cv::Mat processedRGB = convertToRGB(YUVChannels);
 #if SHOW_IMAGES
@@ -670,7 +682,6 @@ private:
   std::vector<cv::Mat> outFrames;
   cv::Mat ALD;
   cv::VideoCapture capture;
-
 
 
   cv::Mat sharpen(cv:: Mat input)
@@ -711,7 +722,12 @@ private:
     negativeDiff += (HREDownsampled - original);
     imshow("ndiff",negativeDiff);
 
-    HREDownsampled = HREDownsampled + .2*positiveDiff - .8*negativeDiff;
+    //NOTE: this line modifies final Y channel.
+    //HREDownsampled = HREDownsampled + .2*positiveDiff - .8*negativeDiff;
+    //HREDownsampled = HREDownsampled - 0.2*negativeDiff;
+    //HREDownsampled = HREDownsampled + 0.2*positiveDiff - 0.2*negativeDiff;
+    
+//    HREDownsampled = HREDownsampled + positiveDiff - negativeDiff;
 
     //HREDownsampled += (original - HREDownsampled);
     //imshow("HRE+=diff",HREDownsampled);
@@ -727,7 +743,8 @@ private:
 
     // Upscale and reblur.
     cv::resize(originalDiff,originalDiff, cv::Point(0,0), scaleFactor, scaleFactor, CV_INTER_CUBIC);
-    cv::resize(HREDownsampled,HREstimate, cv::Point(0,0), scaleFactor, scaleFactor, CV_INTER_CUBIC);
+    //Note this line modifies Y channel.
+    //cv::resize(HREDownsampled,HREstimate, cv::Point(0,0), scaleFactor, scaleFactor, CV_INTER_CUBIC);
    // cv::blur(originalDiff, originalDiff, blurKernel);
     cv::GaussianBlur(originalDiff, originalDiff, blurKernel,1,1);
     cv::imshow("Upscaled difference with original",originalDiff);

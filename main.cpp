@@ -547,8 +547,8 @@ public:
     cv::Mat showe = erodedExtractedEdges.clone();
     cv::Mat showMinus = erodedExtractedEdges.clone();
 
-    pow(showe,2,showe);
-    pow(showb,2,showb);
+    cv::pow(showe,2,showe);
+    cv::pow(showb,2,showb);
 
     //showMinus = (erodedExtractedEdges - showb);
     //cv::subtract(showb, erodedExtractedEdges,showMinus);
@@ -569,10 +569,10 @@ public:
     cv::absdiff(showe,showb,showMinus);
     //showMinus*=50;
 #if SHOW_IMAGES
-    imshow("Gradient - GradientMap",showe - showb);
-    imshow("Gradient - GradientMap2",showMinus);
-    imshow("Gradient extract^2",showe);
-    imshow("Gradient org^2",showb);
+    cv::imshow("Gradient - GradientMap",showe - showb);
+    cv::imshow("Gradient - GradientMap2",showMinus);
+    cv::imshow("Gradient extract^2",showe);
+    cv::imshow("Gradient org^2",showb);
     //imshow("Gradient*Y",showMinus*YChannel.clone());
 #endif
 
@@ -585,7 +585,7 @@ public:
     int i = 0;
     while (i < 50)
     {
-      originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
+      //originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
      // pow(erodedExtractedEdges,2,erodedExtractedEdges);
       pow(gradient_bicubic,2,gradient_bicubic);
       cv::absdiff(erodedExtractedEdges,gradient_bicubic,graDiff);
@@ -611,13 +611,16 @@ public:
 
       //YChannel = YChannel + 0.2*originalDiff;
 
-      YChannel = YChannel + 0.5*(erodedExtractedEdges - gradient_bicubic);
+      YChannel = YChannel + 0.004*(erodedExtractedEdges - gradient_bicubic);
 
+      originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
       gradient_bicubic = getGradient(YChannel);
       i++;
     }
 
 #if SHOW_IMAGES
+    cv::imshow("erod-grad",(erodedExtractedEdges - gradient_bicubic));
+    cv::imshow("grad-erod",(gradient_bicubic - erodedExtractedEdges));
     cv::imshow("YchannelFinal",YChannel);
     cv::imshow("graDiff",graDiff);
     cv::imshow("gradient_last_iteration",gradient_bicubic);
@@ -694,16 +697,26 @@ private:
     //cv::Mat originalDiff = originalYChannel - HREDownsampled;
     //cv::Mat originalDiff = original - HREDownsampled;
     cv::Mat originalDiff = cv::Mat::zeros(HREDownsampled.rows,HREDownsampled.cols,HREDownsampled.type());
+    cv::Mat positiveDiff = cv::Mat::zeros(HREDownsampled.rows,HREDownsampled.cols,HREDownsampled.type());
+    cv::Mat negativeDiff = cv::Mat::zeros(HREDownsampled.rows,HREDownsampled.cols,HREDownsampled.type());
     /////////////Used to retrieve absdiff, now retrieve +/- diff seperately.
     //cv::absdiff(original,HREDownsampled,originalDiff);
     cv::imshow("o-HR",5*(original - HREDownsampled) );
     cv::imshow("HR-o",5*(HREDownsampled - original) );
     //originalDiff += original - HREDownsampled;
     //cv::imshow("ordddd",originalDiff);
-    HREDownsampled += (original - HREDownsampled);
-    imshow("HRE+=diff",HREDownsampled);
-    HREDownsampled -= (HREDownsampled - original);
-    imshow("HRE0=diff",HREDownsampled);
+
+    positiveDiff += (original - HREDownsampled);
+    imshow("pdiff",positiveDiff);
+    negativeDiff += (HREDownsampled - original);
+    imshow("ndiff",negativeDiff);
+
+    HREDownsampled = HREDownsampled + .2*positiveDiff - .8*negativeDiff;
+
+    //HREDownsampled += (original - HREDownsampled);
+    //imshow("HRE+=diff",HREDownsampled);
+    //HREDownsampled -= (HREDownsampled - original);
+    //imshow("HRE-=diff",HREDownsampled);
 
 
     cv::imshow("origna image",original);

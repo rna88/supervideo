@@ -583,12 +583,13 @@ public:
     
     // Iterative formula
     int i = 0;
-    while (i < 1)
+    while (i < 50)
     {
-      originalDiff = getDifference(originalYChannel.clone(), YChannel.clone(), blurKernel);
+      originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
      // pow(erodedExtractedEdges,2,erodedExtractedEdges);
       pow(gradient_bicubic,2,gradient_bicubic);
       cv::absdiff(erodedExtractedEdges,gradient_bicubic,graDiff);
+      cv::imshow("gb-gh", gradient_bicubic - erodedExtractedEdges);
 
       //YChannel = YChannel;
       //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
@@ -597,9 +598,20 @@ public:
       //YChannel = YChannel + 40.4*(erodedExtractedEdges - gradient_bicubic);
       //YChannel = YChannel + 0.20*originalDiff  + 0.004*(erodedExtractedEdges - gradient_bicubic);
       //YChannel = YChannel + 900*YChannel.mul(erodedExtractedEdges - gradient_bicubic,1);
-      YChannel = YChannel + 0.002*YChannel.mul(graDiff,1) - 0.002*originalDiff;
+      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1) - 0.002*originalDiff;
+
+      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1);
+      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1);
+
+      //YChannel = YChannel - 0.4*originalDiff;
+      //
       //YChannel = YChannel + YChannel.absdiff(originalDiff,1);
       //YChannel = YChannel + YChannel.mul(graDiff,1);
+
+
+      //YChannel = YChannel + 0.2*originalDiff;
+
+      YChannel = YChannel + 0.5*(erodedExtractedEdges - gradient_bicubic);
 
       gradient_bicubic = getGradient(YChannel);
       i++;
@@ -617,7 +629,7 @@ public:
  
     //Assign modified Y channel back to vector
     //YUVChannels[Y] = YChannel;  
-    YUVChannels[Y] = YChannel;  
+    YUVChannels[Y] = YChannel; 
     
     // convert back to RGB format.
     cv::Mat processedRGB = convertToRGB(YUVChannels);
@@ -680,20 +692,57 @@ private:
     cv::imshow("extracted_edges_blurred",HREDownsampled);
     
     //cv::Mat originalDiff = originalYChannel - HREDownsampled;
-    cv::Mat originalDiff = original - HREDownsampled;
-    /////////////asdfffffffffffffffff
-    cv::absdiff(original,HREDownsampled,originalDiff);
+    //cv::Mat originalDiff = original - HREDownsampled;
+    cv::Mat originalDiff = cv::Mat::zeros(HREDownsampled.rows,HREDownsampled.cols,HREDownsampled.type());
+    /////////////Used to retrieve absdiff, now retrieve +/- diff seperately.
+    //cv::absdiff(original,HREDownsampled,originalDiff);
+    cv::imshow("o-HR",5*(original - HREDownsampled) );
+    cv::imshow("HR-o",5*(HREDownsampled - original) );
+    //originalDiff += original - HREDownsampled;
+    //cv::imshow("ordddd",originalDiff);
+    HREDownsampled += (original - HREDownsampled);
+    imshow("HRE+=diff",HREDownsampled);
+    HREDownsampled -= (HREDownsampled - original);
+    imshow("HRE0=diff",HREDownsampled);
+
+
     cv::imshow("origna image",original);
     cv::imshow("od",originalDiff);
 
+   // addDifference(original.clone(),HREDownsampled,1);
+    //cv::imshow("HRED",HREDownsampled);
+
     // Upscale and reblur.
     cv::resize(originalDiff,originalDiff, cv::Point(0,0), scaleFactor, scaleFactor, CV_INTER_CUBIC);
+    cv::resize(HREDownsampled,HREstimate, cv::Point(0,0), scaleFactor, scaleFactor, CV_INTER_CUBIC);
    // cv::blur(originalDiff, originalDiff, blurKernel);
     cv::GaussianBlur(originalDiff, originalDiff, blurKernel,1,1);
-    cv::imshow("Difference with original",originalDiff);
+    cv::imshow("Upscaled difference with original",originalDiff);
     
     return originalDiff;
   } 
+
+  //cv::Mat Difference(cv::Mat original, cv::Mat reconstructed)
+  void addDifference(cv::Mat original, cv::Mat& reconstructed, float scale)
+  {
+    cv::Mat difference = original.clone();
+    for (int y = 0; y < original.rows; y++) 
+    {
+      for (int x = 0; x < original.cols; x++) 
+      {
+	int signedDiff = (int)reconstructed.at<unsigned char>(y,x) - (int)original.at<unsigned char>(y,x);
+	if (signedDiff >= 0)
+	{
+          reconstructed.at<unsigned char>(y,x) -= signedDiff*scale;
+	}
+	else 
+	{
+          reconstructed.at<unsigned char>(y,x) += signedDiff*scale;
+	}
+      }
+    }   
+    cv::imshow("changed",reconstructed);
+  }
 
   int readPixel(cv::Mat& img,int x, int y)
   {

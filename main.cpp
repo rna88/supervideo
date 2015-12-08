@@ -3,7 +3,7 @@
 #include "textureSharpen.cpp"
 
 #define Y 0
-#define SHOW_IMAGES 0
+#define SHOW_IMAGES 1
 //const char* input = "YChannel.png";
 const char* input = "lena.jpg";
 const int ALDRadius = 5;
@@ -48,14 +48,15 @@ public:
     //imshow("Cb", frame.V);
   }
 
-  void resize(char* scaleFactorString, int resizeBicubic)
+  void resize(char* scaleFactorString, char* bicubic)
   {
     scaleFactor = std::atof(scaleFactorString);
+    int resizeBicubic = std::atof(bicubic);
     cv::Size outImageSize(0,0);
 
     std::cout << "Total # Frames: " << inFrames.size() << std::endl;
 
-    for (unsigned long int i = 0; i < inFrames.size()/100; i++)
+    for (unsigned long int i = 0; i < inFrames.size()/50; i++)
     {
       std::cout << "\r" << "Scaling Frame: " << i+1 << "/" << inFrames.size();
       outFrames.push_back(inFrames[i]);
@@ -1086,16 +1087,824 @@ public:
 //    std::cout << "sharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
   }
 
+  void testSharpenEdges4(char* scaleFactorString)
+  {
+    scaleFactor = std::atof(scaleFactorString);
+    cv::Size outImageSize(0,0);
+
+    // grab original Y channel.
+    cv::Mat inputImage = cv::imread(input);
+    if (inputImage.rows == 0) std::cout << "NOPE\n";
+    
+    // downscale original so we can test the uprezzed.
+    cv::Mat inputDownscaled;
+    cv::resize(inputImage,inputDownscaled,outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+    //cv::resize(inputImage,inputDownscaled,outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+
+    // upscale bicubic downscaled image using bicubic.
+    cv::Mat inputBICUBIC;
+    cv::resize(inputDownscaled,inputBICUBIC,outImageSize,scaleFactor,scaleFactor,CV_INTER_CUBIC);
+
+    cv::Mat YUVIn = inputDownscaled.clone();
+    std::vector<cv::Mat> originalYUVChannels = convertToYUV(YUVIn);
+    cv::Mat originalYChannel = originalYUVChannels[Y];
+    // input bicubic is real resized bicubic?????????????????
+
+    // Try straight conversion to YUV->RGB and compare PSNR.
+    // Turns out PSNR decreases slightly when converting from RGB->YUV-RGB. Due to opencv bug.
+    cv::Mat BY = inputBICUBIC.clone();
+    std::vector<cv::Mat> BYY = convertToYUV(BY);
+    cv::Mat RGBOrg = convertToRGB(BYY);
+
+
+   
+    // grab bicubic resized Y channel.
+    cv::Mat YUVOut = inputBICUBIC.clone();
+#if SHOW_IMAGES
+    cv::imshow("OriginalRGB",YUVOut);
+#endif
+    std::vector<cv::Mat> YUVChannels = convertToYUV(YUVOut);
+    //cv::imshow("YUVOut",YUVOut);
+
+    cv::Mat YChannel = YUVChannels[Y];
+#if SHOW_IMAGES
+    cv::imshow("Ychannel", YChannel);
+#endif
+    // Use YChannel for rest of algorthm. 
+
+
+    // Calculate ALD.
+    cv::Mat YChannelCopy = YChannel.clone();
+    cv::Mat ALD = getALD(YChannelCopy,ALDRadius);
+#if SHOW_IMAGES
+    cv::imshow("ALD",ALD);
+#endif
+    //YChannel = ALD;
+    
+
+    cv::Mat original_gradient;
+    cv::Mat gradient_bicubic;
+    gradient_bicubic = getGradient(ALD.clone());
+#if SHOW_IMAGES
+    cv::imshow("Gradient ALD",gradient_bicubic);
+#endif
+    // G_b = gradient_bicubic.
+    gradient_bicubic = getGradient(YChannel.clone());
+    original_gradient = getGradient(BYY[Y]);
+#if SHOW_IMAGES
+    cv::imshow("Gradient bicubic",gradient_bicubic);
+    cv::imshow("Gradient original",original_gradient);
+#endif
+ 
+
+    cv::Size blurKernel = cv::Size(3,3);
+
+    // Extract edges from ALD.
+    cv::Mat extractMask = ALD.clone();
+    cv::Mat extractedEdges;
+    extractedEdges = getGradient(YChannel);
+    
+    cv::Scalar threshold = cv::mean(ALD);
+    float avgALD = 1.5 * threshold.val[0];
+
+    cv::Mat gradient_b_dilated;
+    cv::dilate(gradient_bicubic,gradient_b_dilated,cv::Mat());
+    cv::imshow("gbd",gradient_b_dilated);
+
+
+    //for (int y = 0; y < gradient_bicubic.rows; y++) 
+    //{
+    //  for (int x = 0; x < gradient_bicubic.cols; x++) 
+    //  {
+    //    //grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+    //    if ((int)gradient_b_dilated.at<unsigned char>(y,x) >  20)
+    //    {
+    //      extractMask.at<unsigned char>(y,x) = 255;
+    //    }
+    //    else 
+    //    {
+    //      extractMask.at<unsigned char>(y,x) = 0;
+    //    }
+    //  }
+    //}
+    //imshow("goodGradMap", extractMask);
+
+
+
+    cv::Mat maskedY = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat extractALD = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    for (int y = 0; y < gradient_bicubic.rows; y++) 
+    {
+      for (int x = 0; x < gradient_bicubic.cols; x++) 
+      {
+	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+	if ((int)ALD.at<unsigned char>(y,x) >  avgALD)
+	{
+          //extractALD.at<unsigned char>(y,x) = 255;
+	  maskedY.at<unsigned char>(y,x) = YChannel.at<unsigned char>(y,x);
+	}
+	else 
+	{
+          extractALD.at<unsigned char>(y,x) = 0;
+	}
+      }
+    }
+
+
+    cv::imshow("extractALD",extractALD);
+    //cv::multiply(YChannel.clone(),extractALD,maskedY,1);
+    //YChannel.copyTo(maskedY,extractALD);
+    cv::imshow("maskedY",maskedY);
+    
+    cv::Mat gradMaskY = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    gradMaskY = getGradient(maskedY);
+    cv::imshow("gradMaskY",gradMaskY);
+
+    cv::resize(gradMaskY,gradMaskY,cv::Size(0,0),scaleFactor,scaleFactor,CV_INTER_CUBIC);
+    cv::GaussianBlur(gradMaskY,gradMaskY,cv::Size(5,5),0,1);
+    cv::Mat erodedMaskY;
+    cv::imshow("gradMaskpreero",gradMaskY);
+    cv::erode(gradMaskY,erodedMaskY,cv::Mat(),cv::Point(-1,-1),1);
+    cv::imshow("erodedMaskedY",erodedMaskY);
+    cv::GaussianBlur(gradMaskY,gradMaskY,cv::Size(5,5),1,0);
+    cv::resize(gradMaskY,gradMaskY,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+    gradMaskY *= 2;
+    cv::imshow("erodedMaskedFinal",gradMaskY);
+
+    
+
+    cv::imshow("YchanelnoBlur",YChannel);
+    cv::Mat testblur = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),0,9);
+    cv::imshow("testblurY",testblur);
+    cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),9,0);
+    cv::imshow("testblurX",testblur);
+
+    //cv::Mat gradEroded  = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    //gradEroded = getGradient(YChannel);
+
+    cv::Mat Y2;
+    cv::Mat Xt = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat XtD = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat diff = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat gradB = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat gb2 = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat gh2 = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    Y2 = originalYChannel.clone(); 
+    Xt = YChannel.clone(); 
+    XtD = YChannel.clone(); 
+    gradB = getGradient(Xt);
+     
+
+
+
+    int iterator = 0;
+    while (iterator < 50)
+    {
+      cv::GaussianBlur(Xt,XtD,cv::Size(5,5),1,0);
+      cv::resize(XtD,XtD,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+      diff = Y2 - XtD;
+      cv::resize(diff,diff,cv::Size(0,0),scaleFactor,scaleFactor,CV_INTER_CUBIC);
+      cv::GaussianBlur(diff,diff,cv::Size(5,5),0,1);
+
+      gradB = getGradient(Xt);
+      cv::pow(gradB,2,gb2);
+      cv::pow(gradMaskY,2,gh2);
+
+      Xt = Xt + 0.2*diff + 0.004*(gradMaskY - gradB); 
+      iterator++;
+    }
+
+   imshow("Xt",Xt);
+   YUVChannels[Y] = Xt; 
+   //YUVChannels[Y] = YChannel; 
+    
+   //getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
+   
+   //cv::Mat finalImage = getFinalTexture(originalYChannel,Xt,ALD,scaleFactor);
+   ////cv::Mat finalImage = getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
+  // YUVChannels[Y] = finalImage; 
+  // imshow("Final iamge",finalImage);
+
+    // convert back to RGB format.
+   cv::Mat processedRGB = convertToRGB(YUVChannels);
+   std::cout << "Orgbicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";
+   std::cout << "Orgsharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
+  
+//
+//    for (int y = 0; y < gradient_bicubic.rows; y++) 
+//    {
+//      for (int x = 0; x < gradient_bicubic.cols; x++) 
+//      {
+//	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+//	if ((int)gradient_b_dilated.at<unsigned char>(y,x) >  20)
+//	{
+//          extractMask.at<unsigned char>(y,x) = 255;
+//	}
+//	else 
+//	{
+//          extractMask.at<unsigned char>(y,x) = 0;
+//	}
+//      }
+//    }
+//
+//#if SHOW_IMAGES
+//    cv::imshow("extractMask",extractMask);
+//#endif
+//    for (int y = 0; y < gradient_bicubic.rows; y++) 
+//    {
+//      for (int x = 0; x < gradient_bicubic.cols; x++) 
+//      {
+//	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+//	if ((int)extractMask.at<unsigned char>(y,x) <  10)
+//	{
+//          //gradient_bicubic.at<unsigned char>(y,x) = 0;
+//          extractedEdges.at<unsigned char>(y,x) = 0;
+//        }
+//      }
+//    }
+//
+//       
+//
+//#if SHOW_IMAGES
+//    cv::imshow("extractedEdges",extractedEdges);
+//#endif
+//
+//    // Resize image and blur it.
+//    cv::Size imageSize(0,0);
+//    cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
+//    //cv::blur(extractedEdges, extractedEdges, blurKernel);
+//    //cv::GaussianBlur(extractedEdges,extractedEdges,blurKernel,1,1);
+//    extractedEdges = sharpen(extractedEdges);
+//#if SHOW_IMAGES
+//    cv::imshow("extractedEdges_upscaled",extractedEdges);
+//#endif
+//
+//    // Apply erosion operator.
+//    cv::Mat erodedExtractedEdges;
+//    cv::erode(extractedEdges,erodedExtractedEdges,cv::Mat(),cv::Point(-1,-1),1);
+//#if SHOW_IMAGES
+//    cv::imshow("erodedExtractedEdges",erodedExtractedEdges);
+//#endif
+//    // Reblur and downsample. 
+//    //cv::blur(erodedExtractedEdges, erodedExtractedEdges, blurKernel);
+//    //cv::GaussianBlur(extractedEdges,extractedEdges,blurKernel,1,1);
+//    //cv::GaussianBlur(erodedExtractedEdges,erodedExtractedEdges,cv::Size(11,11),1,1);
+//    //erodedExtractedEdges = sharpen(erodedExtractedEdges);
+//    erodedExtractedEdges *= 5000.0;  
+//#if SHOW_IMAGES
+//    cv::imshow("erodedEE_sharp", erodedExtractedEdges);
+//#endif
+//	   
+//    cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_CUBIC);
+//#if SHOW_IMAGES
+//    cv::imshow("erodedEE_sharp_downscaled", erodedExtractedEdges);
+//#endif
+//   
+//    erodedExtractedEdges *= 1.0;  
+//#if SHOW_IMAGES
+//    cv::imshow("erodedEE_sharp_downscaled * 2", erodedExtractedEdges);
+//#endif
+//    // G_hat = erodedExtractedEdges.
+//
+//#if SHOW_IMAGES
+//      //cv::imshow("gb sharp", sharpened);
+//      //cv::imshow("low contrast", lowContrastMask);
+//#endif
+//      //gradient_bicubic = sharpened;
+//
+//
+//    cv::Mat showb = gradient_bicubic.clone();
+//    cv::Mat showe = erodedExtractedEdges.clone();
+//    cv::Mat showMinus = erodedExtractedEdges.clone();
+//
+//    cv::pow(showe,2,showe);
+//    cv::pow(showb,2,showb);
+//
+//    //showMinus = (erodedExtractedEdges - showb);
+//    //cv::subtract(showb, erodedExtractedEdges,showMinus);
+//    
+//  //  for (int y = 0; y < gradient_bicubic.rows; y++) 
+//  //  {
+//  //    for (int x = 0; x < gradient_bicubic.cols; x++) 
+//  //    {
+//  //      //grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+//  //      showMinus.at<unsigned char>(y,x) = 100;
+//  //      //erodedExtractedEdges.at<unsigned char>(y,x) = 0;
+//  //      //erodedExtractedEdges.at<unsigned char>(y,x) - 
+//  //      //gradient_bicubic.at<unsigned char>(y,x);
+//  //      //std::cout << ".";	
+//  //    }
+//  //  }
+//    
+//    cv::absdiff(showe,showb,showMinus);
+//    //showMinus*=50;
+//#if SHOW_IMAGES
+//    cv::imshow("Gradient - GradientMap",showe - showb);
+//    cv::imshow("Gradient - GradientMap2",showMinus);
+//    cv::imshow("Gradient extract^2",showe);
+//    cv::imshow("Gradient org^2",showb);
+//    //imshow("Gradient*Y",showMinus*YChannel.clone());
+//#endif
+//
+//    cv::Mat originalDiff;  
+//    cv::Mat graDiff;  
+//
+//    cv::pow(erodedExtractedEdges,2,erodedExtractedEdges);
+//    
+//    // Iterative formula
+//    int i = 0;
+//    while (i < 50)
+//    {
+//      //originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
+//     // pow(erodedExtractedEdges,2,erodedExtractedEdges);
+//      pow(gradient_bicubic,2,gradient_bicubic);
+//      cv::absdiff(erodedExtractedEdges,gradient_bicubic,graDiff);
+//      cv::imshow("gb-gh", gradient_bicubic - erodedExtractedEdges);
+//      cv::imshow("gh-gb", erodedExtractedEdges - gradient_bicubic);
+//
+//      //YChannel = YChannel;
+//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
+//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
+//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
+//      //YChannel = YChannel + 40.4*(erodedExtractedEdges - gradient_bicubic);
+//      //YChannel = YChannel + 0.20*originalDiff  + 0.004*(erodedExtractedEdges - gradient_bicubic);
+//      //YChannel = YChannel + 900*YChannel.mul(erodedExtractedEdges - gradient_bicubic,1);
+//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1) - 0.002*originalDiff;
+//
+//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1);
+//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1);
+//
+//      //YChannel = YChannel - 0.4*originalDiff;
+//      //
+//      //YChannel = YChannel + YChannel.absdiff(originalDiff,1);
+//      //YChannel = YChannel + YChannel.mul(graDiff,1);
+//
+//
+//      //YChannel = YChannel + 0.2*originalDiff;
+//
+//      //YChannel = YChannel + (erodedExtractedEdges - gradient_bicubic);
+//      
+//      // gradient compensated sharp edges.
+//      //YChannel = YChannel + 400*(erodedExtractedEdges - gradient_bicubic);
+//
+//      
+//      // NOTE: get difference currently modifies the YChannel result!
+//      originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
+//      gradient_bicubic = getGradient(YChannel);
+//      i++;
+//    }
+//
+//#if SHOW_IMAGES
+//    cv::imshow("erod-grad",(erodedExtractedEdges - gradient_bicubic));
+//    cv::imshow("grad-erod",(gradient_bicubic - erodedExtractedEdges));
+//    cv::imshow("YchannelFinal",YChannel);
+//    cv::imshow("graDiff",graDiff);
+//    cv::imshow("gradient_last_iteration",gradient_bicubic);
+//    cv::imshow("originalDiff",originalDiff);
+//    cv::imshow("grad*Y",YChannel.mul(graDiff,0.5));
+//    //cv::subtract(YChannel,originalDiff,YChannel);
+//    //cv::imshow("sum Y - OD",YChannel);
+//#endif
+//    
+//    
+//    
+//
+//    //cv::GaussianBlur(YChannel,YChannel,cv::Size(11,11),1,1); 
+//    //cv::imshow("YChannel1d blur", YChannel);
+//    //Assign modified Y channel back to vector
+//    //YUVChannels[Y] = YChannel;  
+//    YUVChannels[Y] = YChannel; 
+//    
+//   getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
+//    // convert back to RGB format.
+//    cv::Mat processedRGB = convertToRGB(YUVChannels);
+//#if SHOW_IMAGES
+//    cv::imshow("processedRGB",processedRGB);
+//#endif
+//
+//   // std::cout << "bicubic PSNR: " << getPSNR(inputImage,inputBICUBIC) << "\n";
+//    std::cout << "bicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";
+//    std::cout << "sharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
+  }
+
+  void testSharpenEdges5(char* scaleFactorString)
+  {
+    scaleFactor = std::atof(scaleFactorString);
+    cv::Size outImageSize(0,0);
+
+    // grab original Y channel.
+    cv::Mat inputImage = cv::imread(input);
+    if (inputImage.rows == 0) std::cout << "NOPE\n";
+    
+    // downscale original so we can test the uprezzed.
+    cv::Mat inputDownscaled;
+    cv::resize(inputImage,inputDownscaled,outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+    //cv::resize(inputImage,inputDownscaled,outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+
+    // upscale bicubic downscaled image using bicubic.
+    cv::Mat inputBICUBIC;
+    cv::resize(inputDownscaled,inputBICUBIC,outImageSize,scaleFactor,scaleFactor,CV_INTER_CUBIC);
+
+    cv::Mat YUVIn = inputDownscaled.clone();
+    std::vector<cv::Mat> originalYUVChannels = convertToYUV(YUVIn);
+    cv::Mat originalYChannel = originalYUVChannels[Y];
+    // input bicubic is real resized bicubic?????????????????
+
+    // Try straight conversion to YUV->RGB and compare PSNR.
+    // Turns out PSNR decreases slightly when converting from RGB->YUV-RGB. Due to opencv bug.
+    cv::Mat BY = inputBICUBIC.clone();
+    std::vector<cv::Mat> BYY = convertToYUV(BY);
+    cv::Mat RGBOrg = convertToRGB(BYY);
+
+
+   
+    // grab bicubic resized Y channel.
+    cv::Mat YUVOut = inputBICUBIC.clone();
+#if SHOW_IMAGES
+    cv::imshow("OriginalRGB",YUVOut);
+#endif
+    std::vector<cv::Mat> YUVChannels = convertToYUV(YUVOut);
+    //cv::imshow("YUVOut",YUVOut);
+
+    cv::Mat YChannel = YUVChannels[Y];
+#if SHOW_IMAGES
+    cv::imshow("Ychannel", YChannel);
+#endif
+    // Use YChannel for rest of algorthm. 
+
+
+    // Calculate ALD.
+    cv::Mat YChannelCopy = YChannel.clone();
+    cv::Mat ALD = getALD(YChannelCopy,ALDRadius);
+#if SHOW_IMAGES
+    cv::imshow("ALD",ALD);
+#endif
+    //YChannel = ALD;
+    
+
+    cv::Mat original_gradient;
+    cv::Mat gradient_bicubic;
+    gradient_bicubic = getGradient(ALD.clone());
+#if SHOW_IMAGES
+    cv::imshow("Gradient ALD",gradient_bicubic);
+#endif
+    // G_b = gradient_bicubic.
+    gradient_bicubic = getGradient(YChannel.clone());
+    original_gradient = getGradient(BYY[Y]);
+#if SHOW_IMAGES
+    cv::imshow("Gradient bicubic",gradient_bicubic);
+    cv::imshow("Gradient original",original_gradient);
+#endif
+ 
+
+    cv::Size blurKernel = cv::Size(3,3);
+
+    // Extract edges from ALD.
+    cv::Mat extractMask = ALD.clone();
+    cv::Mat extractedEdges;
+    extractedEdges = getGradient(YChannel);
+    
+    cv::Scalar threshold = cv::mean(ALD);
+    float avgALD = 1.5 * threshold.val[0];
+
+    cv::Mat gradient_b_dilated;
+    cv::dilate(gradient_bicubic,gradient_b_dilated,cv::Mat());
+    cv::imshow("gbd",gradient_b_dilated);
+
+
+    //for (int y = 0; y < gradient_bicubic.rows; y++) 
+    //{
+    //  for (int x = 0; x < gradient_bicubic.cols; x++) 
+    //  {
+    //    //grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+    //    if ((int)gradient_b_dilated.at<unsigned char>(y,x) >  20)
+    //    {
+    //      extractMask.at<unsigned char>(y,x) = 255;
+    //    }
+    //    else 
+    //    {
+    //      extractMask.at<unsigned char>(y,x) = 0;
+    //    }
+    //  }
+    //}
+    //imshow("goodGradMap", extractMask);
+
+
+
+    cv::Mat maskedY = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat extractALD = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    for (int y = 0; y < gradient_bicubic.rows; y++) 
+    {
+      for (int x = 0; x < gradient_bicubic.cols; x++) 
+      {
+	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+	if ((int)ALD.at<unsigned char>(y,x) >  avgALD)
+	//if ((int)gradient_b_dilated.at<unsigned char>(y,x) >  20)
+	{
+          //extractALD.at<unsigned char>(y,x) = 255;
+	  maskedY.at<unsigned char>(y,x) = gradient_bicubic.at<unsigned char>(y,x);
+	}
+	else 
+	{
+          extractALD.at<unsigned char>(y,x) = 0;
+	}
+      }
+    }
+
+
+    cv::imshow("extractALD",extractALD);
+    //cv::multiply(YChannel.clone(),extractALD,maskedY,1);
+    //YChannel.copyTo(maskedY,extractALD);
+    cv::imshow("maskedY",maskedY);
+    
+//    cv::Mat gradMaskY = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+//    gradMaskY = getGradient(maskedY);
+//    cv::imshow("gradMaskY",gradMaskY);
+    cv::Mat gradMaskY = maskedY.clone();
+    cv::imshow("gradMaskY",gradMaskY);
+
+
+
+    cv::resize(gradMaskY,gradMaskY,cv::Size(0,0),scaleFactor,scaleFactor,CV_INTER_CUBIC);
+    cv::GaussianBlur(gradMaskY,gradMaskY,cv::Size(5,5),0,1);
+    cv::Mat erodedMaskY;
+    cv::imshow("gradMaskpreero",gradMaskY);
+    cv::erode(gradMaskY,erodedMaskY,cv::Mat(),cv::Point(-1,-1),1);
+    cv::imshow("erodedMaskedY",erodedMaskY);
+    cv::GaussianBlur(gradMaskY,gradMaskY,cv::Size(5,5),1,0);
+    cv::resize(gradMaskY,gradMaskY,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+    gradMaskY *= 2;
+    cv::imshow("erodedMaskedFinal",gradMaskY);
+
+    
+
+    cv::imshow("YchanelnoBlur",YChannel);
+    cv::Mat testblur = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),0,9);
+    cv::imshow("testblurY",testblur);
+    cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),9,0);
+    cv::imshow("testblurX",testblur);
+
+    //cv::Mat gradEroded  = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    //gradEroded = getGradient(YChannel);
+
+    cv::Mat Y2;
+    cv::Mat Xt = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat XtD = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat diff = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat gradB = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat gb2 = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    cv::Mat gh2 = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    Y2 = originalYChannel.clone(); 
+    Xt = YChannel.clone(); 
+    XtD = YChannel.clone(); 
+    gradB = getGradient(Xt);
+     
+
+
+
+    int iterator = 0;
+    while (iterator < 50)
+    {
+      cv::GaussianBlur(Xt,XtD,cv::Size(5,5),1,0);
+      cv::resize(XtD,XtD,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+      diff = Y2 - XtD;
+      cv::resize(diff,diff,cv::Size(0,0),scaleFactor,scaleFactor,CV_INTER_CUBIC);
+      cv::GaussianBlur(diff,diff,cv::Size(5,5),0,1);
+
+      gradB = getGradient(Xt);
+      cv::pow(gradB,2,gb2);
+      cv::pow(gradMaskY,2,gh2);
+
+      Xt = Xt + 0.2*diff + 0.004*(gradMaskY - gradB); 
+      iterator++;
+    }
+
+   imshow("Xt",Xt);
+   //YUVChannels[Y] = Xt; 
+   //YUVChannels[Y] = YChannel; 
+    
+   //getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
+   
+   cv::Mat finalImage = getFinalTexture(originalYChannel,Xt,ALD,scaleFactor);
+   ////cv::Mat finalImage = getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
+   YUVChannels[Y] = finalImage; 
+  // imshow("Final iamge",finalImage);
+
+    // convert back to RGB format.
+   cv::Mat processedRGB = convertToRGB(YUVChannels);
+   std::cout << "Orgbicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";
+   std::cout << "Orgsharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
+  
+//
+//    for (int y = 0; y < gradient_bicubic.rows; y++) 
+//    {
+//      for (int x = 0; x < gradient_bicubic.cols; x++) 
+//      {
+//	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+//	if ((int)gradient_b_dilated.at<unsigned char>(y,x) >  20)
+//	{
+//          extractMask.at<unsigned char>(y,x) = 255;
+//	}
+//	else 
+//	{
+//          extractMask.at<unsigned char>(y,x) = 0;
+//	}
+//      }
+//    }
+//
+//#if SHOW_IMAGES
+//    cv::imshow("extractMask",extractMask);
+//#endif
+//    for (int y = 0; y < gradient_bicubic.rows; y++) 
+//    {
+//      for (int x = 0; x < gradient_bicubic.cols; x++) 
+//      {
+//	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+//	if ((int)extractMask.at<unsigned char>(y,x) <  10)
+//	{
+//          //gradient_bicubic.at<unsigned char>(y,x) = 0;
+//          extractedEdges.at<unsigned char>(y,x) = 0;
+//        }
+//      }
+//    }
+//
+//       
+//
+//#if SHOW_IMAGES
+//    cv::imshow("extractedEdges",extractedEdges);
+//#endif
+//
+//    // Resize image and blur it.
+//    cv::Size imageSize(0,0);
+//    cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
+//    //cv::blur(extractedEdges, extractedEdges, blurKernel);
+//    //cv::GaussianBlur(extractedEdges,extractedEdges,blurKernel,1,1);
+//    extractedEdges = sharpen(extractedEdges);
+//#if SHOW_IMAGES
+//    cv::imshow("extractedEdges_upscaled",extractedEdges);
+//#endif
+//
+//    // Apply erosion operator.
+//    cv::Mat erodedExtractedEdges;
+//    cv::erode(extractedEdges,erodedExtractedEdges,cv::Mat(),cv::Point(-1,-1),1);
+//#if SHOW_IMAGES
+//    cv::imshow("erodedExtractedEdges",erodedExtractedEdges);
+//#endif
+//    // Reblur and downsample. 
+//    //cv::blur(erodedExtractedEdges, erodedExtractedEdges, blurKernel);
+//    //cv::GaussianBlur(extractedEdges,extractedEdges,blurKernel,1,1);
+//    //cv::GaussianBlur(erodedExtractedEdges,erodedExtractedEdges,cv::Size(11,11),1,1);
+//    //erodedExtractedEdges = sharpen(erodedExtractedEdges);
+//    erodedExtractedEdges *= 5000.0;  
+//#if SHOW_IMAGES
+//    cv::imshow("erodedEE_sharp", erodedExtractedEdges);
+//#endif
+//	   
+//    cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_CUBIC);
+//#if SHOW_IMAGES
+//    cv::imshow("erodedEE_sharp_downscaled", erodedExtractedEdges);
+//#endif
+//   
+//    erodedExtractedEdges *= 1.0;  
+//#if SHOW_IMAGES
+//    cv::imshow("erodedEE_sharp_downscaled * 2", erodedExtractedEdges);
+//#endif
+//    // G_hat = erodedExtractedEdges.
+//
+//#if SHOW_IMAGES
+//      //cv::imshow("gb sharp", sharpened);
+//      //cv::imshow("low contrast", lowContrastMask);
+//#endif
+//      //gradient_bicubic = sharpened;
+//
+//
+//    cv::Mat showb = gradient_bicubic.clone();
+//    cv::Mat showe = erodedExtractedEdges.clone();
+//    cv::Mat showMinus = erodedExtractedEdges.clone();
+//
+//    cv::pow(showe,2,showe);
+//    cv::pow(showb,2,showb);
+//
+//    //showMinus = (erodedExtractedEdges - showb);
+//    //cv::subtract(showb, erodedExtractedEdges,showMinus);
+//    
+//  //  for (int y = 0; y < gradient_bicubic.rows; y++) 
+//  //  {
+//  //    for (int x = 0; x < gradient_bicubic.cols; x++) 
+//  //    {
+//  //      //grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
+//  //      showMinus.at<unsigned char>(y,x) = 100;
+//  //      //erodedExtractedEdges.at<unsigned char>(y,x) = 0;
+//  //      //erodedExtractedEdges.at<unsigned char>(y,x) - 
+//  //      //gradient_bicubic.at<unsigned char>(y,x);
+//  //      //std::cout << ".";	
+//  //    }
+//  //  }
+//    
+//    cv::absdiff(showe,showb,showMinus);
+//    //showMinus*=50;
+//#if SHOW_IMAGES
+//    cv::imshow("Gradient - GradientMap",showe - showb);
+//    cv::imshow("Gradient - GradientMap2",showMinus);
+//    cv::imshow("Gradient extract^2",showe);
+//    cv::imshow("Gradient org^2",showb);
+//    //imshow("Gradient*Y",showMinus*YChannel.clone());
+//#endif
+//
+//    cv::Mat originalDiff;  
+//    cv::Mat graDiff;  
+//
+//    cv::pow(erodedExtractedEdges,2,erodedExtractedEdges);
+//    
+//    // Iterative formula
+//    int i = 0;
+//    while (i < 50)
+//    {
+//      //originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
+//     // pow(erodedExtractedEdges,2,erodedExtractedEdges);
+//      pow(gradient_bicubic,2,gradient_bicubic);
+//      cv::absdiff(erodedExtractedEdges,gradient_bicubic,graDiff);
+//      cv::imshow("gb-gh", gradient_bicubic - erodedExtractedEdges);
+//      cv::imshow("gh-gb", erodedExtractedEdges - gradient_bicubic);
+//
+//      //YChannel = YChannel;
+//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
+//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
+//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
+//      //YChannel = YChannel + 40.4*(erodedExtractedEdges - gradient_bicubic);
+//      //YChannel = YChannel + 0.20*originalDiff  + 0.004*(erodedExtractedEdges - gradient_bicubic);
+//      //YChannel = YChannel + 900*YChannel.mul(erodedExtractedEdges - gradient_bicubic,1);
+//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1) - 0.002*originalDiff;
+//
+//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1);
+//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1);
+//
+//      //YChannel = YChannel - 0.4*originalDiff;
+//      //
+//      //YChannel = YChannel + YChannel.absdiff(originalDiff,1);
+//      //YChannel = YChannel + YChannel.mul(graDiff,1);
+//
+//
+//      //YChannel = YChannel + 0.2*originalDiff;
+//
+//      //YChannel = YChannel + (erodedExtractedEdges - gradient_bicubic);
+//      
+//      // gradient compensated sharp edges.
+//      //YChannel = YChannel + 400*(erodedExtractedEdges - gradient_bicubic);
+//
+//      
+//      // NOTE: get difference currently modifies the YChannel result!
+//      originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
+//      gradient_bicubic = getGradient(YChannel);
+//      i++;
+//    }
+//
+//#if SHOW_IMAGES
+//    cv::imshow("erod-grad",(erodedExtractedEdges - gradient_bicubic));
+//    cv::imshow("grad-erod",(gradient_bicubic - erodedExtractedEdges));
+//    cv::imshow("YchannelFinal",YChannel);
+//    cv::imshow("graDiff",graDiff);
+//    cv::imshow("gradient_last_iteration",gradient_bicubic);
+//    cv::imshow("originalDiff",originalDiff);
+//    cv::imshow("grad*Y",YChannel.mul(graDiff,0.5));
+//    //cv::subtract(YChannel,originalDiff,YChannel);
+//    //cv::imshow("sum Y - OD",YChannel);
+//#endif
+//    
+//    
+//    
+//
+//    //cv::GaussianBlur(YChannel,YChannel,cv::Size(11,11),1,1); 
+//    //cv::imshow("YChannel1d blur", YChannel);
+//    //Assign modified Y channel back to vector
+//    //YUVChannels[Y] = YChannel;  
+//    YUVChannels[Y] = YChannel; 
+//    
+//   getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
+//    // convert back to RGB format.
+//    cv::Mat processedRGB = convertToRGB(YUVChannels);
+//#if SHOW_IMAGES
+//    cv::imshow("processedRGB",processedRGB);
+//#endif
+//
+//   // std::cout << "bicubic PSNR: " << getPSNR(inputImage,inputBICUBIC) << "\n";
+//    std::cout << "bicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";
+//    std::cout << "sharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
+  }
+
+
   void testPSNR()
   {
     double avgPSNR = 0;
     cv::Size outImageSize(0,0);
 
-    for (unsigned long int i = 0; i < inFrames.size()/100; i++ ) 
+    for (unsigned long int i = 0; i < outFrames.size(); i++ ) 
     {
       avgPSNR += getPSNR(inFrames[i],outFrames[i]);
     }
-    avgPSNR /= inFrames.size()/100;
+    avgPSNR /= outFrames.size();
 
     std::cout << "Average PSNR per frame: " << avgPSNR << std::endl;
   }
@@ -1105,14 +1914,14 @@ public:
     double avgPSNR = 0;
     cv::Size outImageSize(0,0);
 
-    for (unsigned long int i = 0; i < inFrames.size()/100; i++ ) 
+    for (unsigned long int i = 0; i < outFrames.size(); i++ ) 
     {
       // Downscale the output to the original image size, 
       // and do PSNR against original image and downscaled output image.
       cv::resize(outFrames[i],outFrames[i],outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_NN);
       avgPSNR += getPSNR(inFrames[i],outFrames[i]);
     }
-    avgPSNR /= inFrames.size()/100;
+    avgPSNR /= inFrames.size();
 
     std::cout << "Average PSNR per frame: " << avgPSNR << std::endl;
   }
@@ -1128,8 +1937,6 @@ private:
 
   void sharpenEdgesOrg(int i)
   {
-   
-
     cv::Mat inputImage = inFrames[i];
     //// scaleFactor = std::atof(scaleFactorString);
     cv::Size outImageSize(0,0);
@@ -1243,7 +2050,8 @@ private:
 	if ((int)ALD.at<unsigned char>(y,x) >  avgALD)
 	{
           //extractALD.at<unsigned char>(y,x) = 255;
-	  maskedY.at<unsigned char>(y,x) = YChannel.at<unsigned char>(y,x);
+	  //maskedY.at<unsigned char>(y,x) = YChannel.at<unsigned char>(y,x);
+	  maskedY.at<unsigned char>(y,x) = gradient_bicubic.at<unsigned char>(y,x);
 	}
 	else 
 	{
@@ -1256,11 +2064,12 @@ private:
     //cv::imshow("extractALD",extractALD);
     //cv::multiply(YChannel.clone(),extractALD,maskedY,1);
     //YChannel.copyTo(maskedY,extractALD);
-    //cv::imshow("maskedY",maskedY);
+    cv::imshow("maskedY",maskedY);
     
     cv::Mat gradMaskY = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
-    gradMaskY = getGradient(maskedY);
-    //cv::imshow("gradMaskY",gradMaskY);
+    //gradMaskY = getGradient(maskedY);
+    gradMaskY = maskedY.clone();
+    cv::imshow("gradMaskY",gradMaskY);
 
     cv::resize(gradMaskY,gradMaskY,cv::Size(0,0),scaleFactor,scaleFactor,CV_INTER_CUBIC);
     cv::GaussianBlur(gradMaskY,gradMaskY,cv::Size(5,5),0,1);
@@ -1275,15 +2084,15 @@ private:
 
     
 
-    //cv::imshow("YchanelnoBlur",YChannel);
-    cv::Mat testblur = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
-    cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),0,9);
-    //cv::imshow("testblurY",testblur);
-    cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),9,0);
-    //cv::imshow("testblurX",testblur);
+    ////cv::imshow("YchanelnoBlur",YChannel);
+    //cv::Mat testblur = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    //cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),0,9);
+    ////cv::imshow("testblurY",testblur);
+    //cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),9,0);
+    ////cv::imshow("testblurX",testblur);
 
-    //cv::Mat gradEroded  = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
-    //gradEroded = getGradient(YChannel);
+    ////cv::Mat gradEroded  = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    ////gradEroded = getGradient(YChannel);
 
     cv::Mat Y2;
     cv::Mat Xt = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
@@ -1317,13 +2126,15 @@ private:
       iterator++;
     }
 
-   //cv::imshow("Xt",Xt);
-  // YUVChannels[Y] = Xt; 
+   cv::imshow("Xt",Xt);
+//   YUVChannels[Y] = Xt; 
    //YUVChannels[Y] = YChannel; 
     
    //getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
-   cv::Mat finalImage = getFinalTexture(originalYChannel,Xt,ALD,scaleFactor);
+   //cv::Mat finalImage = getFinalTexture(originalYChannel,Xt,ALD,scaleFactor);
+   cv::Mat finalImage = getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
    YUVChannels[Y] = finalImage; 
+   //YUVChannels[Y] = Xt;; 
 
     // convert back to RGB format.
    cv::Mat processedRGB = convertToRGB(YUVChannels);
@@ -1732,22 +2543,24 @@ int main(int argc,char* argv[])
 {
   if (argc <= 1) 
   { 
-    std::cout << "Usage: supervideo <input video file> <output video file> <scale Factor>\n"; 
+    std::cout << "Usage: supervideo <input video file> <output video file> <scale Factor (decimal)> <Use bicbubic interpolation (0/1) >\n"; 
     return 0 /*exit(1)*/;
   }
 
   supervideo sv;
   sv.readVideo(argv[1]);
 //  sv.interpolate();
-  sv.resize(argv[3],1);
+  sv.resize(argv[3], argv[4]);
   sv.writeVideo(argv[2]);
-//  sv.testPSNR();
   sv.testPSNR();
-  //sv.testSharpenEdges3(argv[3]);
+//  sv.testPSNR();
+  sv.testSharpenEdges5(argv[3]);
 
 
   //Wait until any key is pressed
+#if SHOW_IMAGES
   cv::waitKey(0);
+#endif
   std::cout << "Exiting application\n";
 
   return 0;

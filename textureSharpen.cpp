@@ -1,7 +1,7 @@
 #include </usr/include/opencv2/opencv.hpp>
 #include <bitset>
 
-#define SHOW_IMAGES 0
+#define SHOW_IMAGES 1
 
 /*****************************************************************************************************************
 ********************** HIGH RESOLUTION TEXTURE SECTION ***********************************************************

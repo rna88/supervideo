@@ -214,46 +214,85 @@ cv::Mat LBP (cv::Mat bicubicImage)
           return output;
         }
 
-        cv::Mat reconstructedHRI (cv::Mat ALD, cv::Mat LRI, cv::Mat HRLBP ,cv::Mat bicubicUpSample, double scaleFactor)
-	{
+//        cv::Mat reconstructedHRI (cv::Mat ALD, cv::Mat LRI, cv::Mat HRLBP ,cv::Mat bicubicUpSample, double scaleFactor)
+//	{
+//                
+//          float lambda = 0.5;                
+//          cv::Mat reconstructedHRI;
+//          cv::Size outImageSize(0,0);        //dummy variable for resize
+//          
+//          //cv::Mat ALD = getALD(bicubicUpSample,15);
+//
+//          //cv::Mat CoefficentMatrix = coefficientMatrixOfHRLBP(HiResImage);
+//          cv::Mat CoefficentMatrix = coefficientMatrixOfHRLBP(HRLBP);
+//          cv::imshow ("Coefficent Matrix", CoefficentMatrix);
+//
+//          cv::Mat CD = elementWiseMultiply(CoefficentMatrix, ALD);
+//          cv::Mat LCD = lambda*CD;
+//
+//          cv::Mat UY;
+//          cv::resize(LRI,UY, outImageSize ,scaleFactor,scaleFactor,CV_INTER_NN);
+//
+//          cv::Mat HTUY;
+//          HTUY = HRLBP.clone();
+//          cv::blur(UY,HTUY,cv::Size(3,3));
+//          //cv::GaussianBlur(UY, HTUY, cv::Size(5,5), 5);
+//          //cv::addWeighted(UY, 1.5, HTUY, -0.5, 0, UY);
+//
+////                int maxWidth = HTUY.rows;                        //find widith of the bicubic image
+////        int maxHeight = HTUY.cols;                        //find height of the bicubic image
+////
+////
+////                int maxWidthALD = LCD.rows;                        //find widith of the bicubic image
+////        int maxHeightALD = LCD.cols;                        //find height of the bicubic image
+//
+//                //cout << "HTUY: " << maxWidth <<        "                " << maxHeight << endl;
+//                //cout << "LCD: "<< maxWidthALD << "                " << maxHeightALD << endl;
+//
+//
+//          reconstructedHRI = HTUY + LCD;
+//          return reconstructedHRI;
+//          //return ALD;
+//        }
+
+cv::Mat reconstructedHRI (cv::Mat ALD, cv::Mat LRI, cv::Mat HRLBP ,cv::Mat bicubicUpSample, double scaleFactor)
+        {
                 
-          float lambda = 0.5;                
-          cv::Mat reconstructedHRI;
-          cv::Size outImageSize(0,0);        //dummy variable for resize
-          
-          //cv::Mat ALD = getALD(bicubicUpSample,15);
+                double lambda = 0.1;                
+                cv::Mat reconstructedHRI;
+                cv::Size outImageSize(0,0);        //dummy variable for resize
 
-          //cv::Mat CoefficentMatrix = coefficientMatrixOfHRLBP(HiResImage);
-          cv::Mat CoefficentMatrix = coefficientMatrixOfHRLBP(HRLBP);
-          cv::imshow ("Coefficent Matrix", CoefficentMatrix);
+                cv::Mat coeffMatrix = coefficientMatrixOfHRLBP(HRLBP);
 
-          cv::Mat CD = elementWiseMultiply(CoefficentMatrix, ALD);
-          cv::Mat LCD = lambda*CD;
+               // cv::Mat ALD = getALD(bicubicUpSample,3);
+                //cv::Mat CD = elementWiseMultiply(CoefficentMatrix, ALD);
+                
 
-          cv::Mat UY;
-          cv::resize(LRI,UY, outImageSize ,scaleFactor,scaleFactor,CV_INTER_NN);
+                cv::Mat CD = elementWiseMultiply(coeffMatrix, ALD);
+                
+                cv::Mat LCD = lambda*CD;
+        
+                cv::Mat UY;
+                cv::resize(LRI,UY, outImageSize ,scaleFactor,scaleFactor,CV_INTER_NN);
+                
 
-          cv::Mat HTUY;
-          HTUY = HRLBP.clone();
-          cv::blur(UY,HTUY,cv::Size(3,3));
-          //cv::GaussianBlur(UY, HTUY, cv::Size(5,5), 5);
-          //cv::addWeighted(UY, 1.5, HTUY, -0.5, 0, UY);
+                cv::Mat HTUY;
+                HTUY = HRLBP.clone();
+                cv::blur(UY,HTUY,cv::Size(3,3));
 
-//                int maxWidth = HTUY.rows;                        //find widith of the bicubic image
-//        int maxHeight = HTUY.cols;                        //find height of the bicubic image
-//
-//
-//                int maxWidthALD = LCD.rows;                        //find widith of the bicubic image
-//        int maxHeightALD = LCD.cols;                        //find height of the bicubic image
-
-                //cout << "HTUY: " << maxWidth <<        "                " << maxHeight << endl;
-                //cout << "LCD: "<< maxWidthALD << "                " << maxHeightALD << endl;
-
-
-          reconstructedHRI = HTUY + LCD;
-          return reconstructedHRI;
-          //return ALD;
+                reconstructedHRI = HTUY + LCD;
+                return reconstructedHRI;
+                //return ALD;
         }
+
+
+
+
+
+
+
+
+
 
         // PARAM: original unscaled Y-channel of image to scale.
 	// > bicubic upsample of the original Y-channel

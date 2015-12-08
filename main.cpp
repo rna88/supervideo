@@ -848,13 +848,13 @@ public:
     }
 
    imshow("Xt",Xt);
-   //YUVChannels[Y] = Xt; 
+  // YUVChannels[Y] = Xt; 
    //YUVChannels[Y] = YChannel; 
     
    //getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
    cv::Mat finalImage = getFinalTexture(originalYChannel,Xt,ALD,scaleFactor);
-
    YUVChannels[Y] = finalImage; 
+
     // convert back to RGB format.
    cv::Mat processedRGB = convertToRGB(YUVChannels);
    std::cout << "Orgbicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";

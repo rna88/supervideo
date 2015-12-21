@@ -5,7 +5,7 @@
 #define Y 0
 #define SHOW_IMAGES 1
 //const char* input = "YChannel.png";
-const char* input = "dune.jpg";
+const char* input = "me.jpg";
 const int ALDRadius = 1;
 
 class supervideo
@@ -1894,13 +1894,14 @@ public:
 //    std::cout << "sharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
   }
 
-  void testSharpenEdges6(char* scaleFactorString)
+  void testSharpenEdges6(char* imageName, char* scaleFactorString)
   {
     scaleFactor = std::atof(scaleFactorString);
     cv::Size outImageSize(0,0);
 
     // grab original Y channel.
-    cv::Mat inputImage = cv::imread(input);
+    //cv::Mat inputImage = cv::imread(input);
+    cv::Mat inputImage = cv::imread(imageName);
     if (inputImage.rows == 0) std::cout << "NOPE\n";
     
 
@@ -2075,17 +2076,43 @@ imshow("orgo",originalYChannelOrg);
     cv::imshow("erodedMaskedFinal",erodedMaskY);
 
 
+    //pass 2!!!!!!!!
+  //  cv::Mat gradMaskY2 = erodedMaskY.clone(); 
+  //  cv::Mat erodedMaskY2; 
+  //  cv::resize(gradMaskY2,gradMaskY2,cv::Size(0,0),scaleFactor,scaleFactor,CV_INTER_CUBIC);
+  //  //cv::GaussianBlur(gradMaskY,gradMaskY,cv::Size(5,5),1,1);
+  //  gradMaskY2 = sharpen(gradMaskY2);
+  //  cv::imshow("gradMaskpreero2",gradMaskY2);
+  //  cv::erode(gradMaskY2,erodedMaskY2,cv::Mat(),cv::Point(-1,-1),1);
+  //  cv::imshow("erodedMaskedY2",erodedMaskY2);
+  //  cv::GaussianBlur(gradMaskY2,gradMaskY2,cv::Size(5,5),1,1);
+  //  cv::resize(gradMaskY2,gradMaskY2,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+  //  //gradMaskY *= 2;
+  //  cv::imshow("erodedMaskedFinal2",erodedMaskY2);
+
+  //  cv::GaussianBlur(erodedMaskY2,erodedMaskY2,cv::Size(5,5),1,1);
+  //  cv::resize(erodedMaskY2,erodedMaskY2,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+  //  erodedMaskY2 *= 2;
+  //  cv::imshow("erodedMaskedFinal2",erodedMaskY2);
+
+
     
 
-    cv::imshow("YchanelnoBlur",YChannel);
-    cv::Mat testblur = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
-    cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),0,9);
-    cv::imshow("testblurY",testblur);
-    cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),9,0);
-    cv::imshow("testblurX",testblur);
+    //cv::imshow("YchanelnoBlur",YChannel);
+    //cv::Mat testblur = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
+    //cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),0,9);
+    //cv::imshow("testblurY",testblur);
+    //cv::GaussianBlur(YChannel,testblur,cv::Size(25,25),9,0);
+    //cv::imshow("testblurX",testblur);
 
     //cv::Mat gradEroded  = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
     //gradEroded = getGradient(YChannel);
+
+
+
+    cv::Mat sharpY = YChannel.clone();
+    gradientSharpen(erodedMaskY,YChannel.clone(),sharpY,10,1,1);
+    imshow("YC_SUPER",sharpY);
 
     cv::Mat Y2;
     cv::Mat Xt = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
@@ -2156,9 +2183,15 @@ imshow("orgo",originalYChannelOrg);
      // subtract eroded from dilated, use apply new dilated 
      // (split gggggg
 
+     
+
      cv::Mat subg = erodedMaskY - gradB;
      cv::Scalar mean = cv::mean(Xt);
      float xtMean = mean.val[0];
+
+     float lambda1 = 1.0;
+     float lambda2 = 0.7;
+
      for (int y = 0;y<gradB.rows;y++)
      {
        for (int x = 0;x<gradB.rows;x++)
@@ -2169,7 +2202,7 @@ imshow("orgo",originalYChannelOrg);
 	 {
 		 if ( currentValue >= modifier )
                  {
-	           Xt.at<unsigned char>(y,x) -= modifier;
+	           Xt.at<unsigned char>(y,x) -= lambda2*modifier;
 		 }
 		 else
 		 {
@@ -2191,12 +2224,13 @@ imshow("orgo",originalYChannelOrg);
      }
 
 
-      
+     //Xt += 2.9*diff; 
+     Xt += lambda1*diff; 
 
 
       //Xt = Xt + 0.2*diff + 0.004*(gh2 -  gb2); 
 
-      std::cout << "Mean: " << xtMean << std::endl;
+      //std::cout << "Mean: " << xtMean << std::endl;
      // if (xtMean > 127) Xt = Xt /*+ 0.2*diff*/ + 1*(erodedMaskY - gradB); 
      // else  Xt = Xt /*+ 0.2*diff*/ - 1*(erodedMaskY - gradB); 
       //Xt = Xt /*+ 0.2*diff*/ + 1*subghgb ;
@@ -2223,202 +2257,6 @@ imshow("orgo",originalYChannelOrg);
 
    std::cout << "Orgbicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";
    std::cout << "Orgsharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
-  
-//
-//    for (int y = 0; y < gradient_bicubic.rows; y++) 
-//    {
-//      for (int x = 0; x < gradient_bicubic.cols; x++) 
-//      {
-//	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
-//	if ((int)gradient_b_dilated.at<unsigned char>(y,x) >  20)
-//	{
-//          extractMask.at<unsigned char>(y,x) = 255;
-//	}
-//	else 
-//	{
-//          extractMask.at<unsigned char>(y,x) = 0;
-//	}
-//      }
-//    }
-//
-//#if SHOW_IMAGES
-//    cv::imshow("extractMask",extractMask);
-//#endif
-//    for (int y = 0; y < gradient_bicubic.rows; y++) 
-//    {
-//      for (int x = 0; x < gradient_bicubic.cols; x++) 
-//      {
-//	//grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
-//	if ((int)extractMask.at<unsigned char>(y,x) <  10)
-//	{
-//          //gradient_bicubic.at<unsigned char>(y,x) = 0;
-//          extractedEdges.at<unsigned char>(y,x) = 0;
-//        }
-//      }
-//    }
-//
-//       
-//
-//#if SHOW_IMAGES
-//    cv::imshow("extractedEdges",extractedEdges);
-//#endif
-//
-//    // Resize image and blur it.
-//    cv::Size imageSize(0,0);
-//    cv::resize(extractedEdges,extractedEdges,imageSize,scaleFactor,scaleFactor,CV_INTER_NN);
-//    //cv::blur(extractedEdges, extractedEdges, blurKernel);
-//    //cv::GaussianBlur(extractedEdges,extractedEdges,blurKernel,1,1);
-//    extractedEdges = sharpen(extractedEdges);
-//#if SHOW_IMAGES
-//    cv::imshow("extractedEdges_upscaled",extractedEdges);
-//#endif
-//
-//    // Apply erosion operator.
-//    cv::Mat erodedExtractedEdges;
-//    cv::erode(extractedEdges,erodedExtractedEdges,cv::Mat(),cv::Point(-1,-1),1);
-//#if SHOW_IMAGES
-//    cv::imshow("erodedExtractedEdges",erodedExtractedEdges);
-//#endif
-//    // Reblur and downsample. 
-//    //cv::blur(erodedExtractedEdges, erodedExtractedEdges, blurKernel);
-//    //cv::GaussianBlur(extractedEdges,extractedEdges,blurKernel,1,1);
-//    //cv::GaussianBlur(erodedExtractedEdges,erodedExtractedEdges,cv::Size(11,11),1,1);
-//    //erodedExtractedEdges = sharpen(erodedExtractedEdges);
-//    erodedExtractedEdges *= 5000.0;  
-//#if SHOW_IMAGES
-//    cv::imshow("erodedEE_sharp", erodedExtractedEdges);
-//#endif
-//	   
-//    cv::resize(erodedExtractedEdges,erodedExtractedEdges,imageSize,1/scaleFactor,1/scaleFactor,CV_INTER_CUBIC);
-//#if SHOW_IMAGES
-//    cv::imshow("erodedEE_sharp_downscaled", erodedExtractedEdges);
-//#endif
-//   
-//    erodedExtractedEdges *= 1.0;  
-//#if SHOW_IMAGES
-//    cv::imshow("erodedEE_sharp_downscaled * 2", erodedExtractedEdges);
-//#endif
-//    // G_hat = erodedExtractedEdges.
-//
-//#if SHOW_IMAGES
-//      //cv::imshow("gb sharp", sharpened);
-//      //cv::imshow("low contrast", lowContrastMask);
-//#endif
-//      //gradient_bicubic = sharpened;
-//
-//
-//    cv::Mat showb = gradient_bicubic.clone();
-//    cv::Mat showe = erodedExtractedEdges.clone();
-//    cv::Mat showMinus = erodedExtractedEdges.clone();
-//
-//    cv::pow(showe,2,showe);
-//    cv::pow(showb,2,showb);
-//
-//    //showMinus = (erodedExtractedEdges - showb);
-//    //cv::subtract(showb, erodedExtractedEdges,showMinus);
-//    
-//  //  for (int y = 0; y < gradient_bicubic.rows; y++) 
-//  //  {
-//  //    for (int x = 0; x < gradient_bicubic.cols; x++) 
-//  //    {
-//  //      //grad.at<unsigned char>(y,x) = (int)img.at<unsigned char>(y,x);
-//  //      showMinus.at<unsigned char>(y,x) = 100;
-//  //      //erodedExtractedEdges.at<unsigned char>(y,x) = 0;
-//  //      //erodedExtractedEdges.at<unsigned char>(y,x) - 
-//  //      //gradient_bicubic.at<unsigned char>(y,x);
-//  //      //std::cout << ".";	
-//  //    }
-//  //  }
-//    
-//    cv::absdiff(showe,showb,showMinus);
-//    //showMinus*=50;
-//#if SHOW_IMAGES
-//    cv::imshow("Gradient - GradientMap",showe - showb);
-//    cv::imshow("Gradient - GradientMap2",showMinus);
-//    cv::imshow("Gradient extract^2",showe);
-//    cv::imshow("Gradient org^2",showb);
-//    //imshow("Gradient*Y",showMinus*YChannel.clone());
-//#endif
-//
-//    cv::Mat originalDiff;  
-//    cv::Mat graDiff;  
-//
-//    cv::pow(erodedExtractedEdges,2,erodedExtractedEdges);
-//    
-//    // Iterative formula
-//    int i = 0;
-//    while (i < 50)
-//    {
-//      //originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
-//     // pow(erodedExtractedEdges,2,erodedExtractedEdges);
-//      pow(gradient_bicubic,2,gradient_bicubic);
-//      cv::absdiff(erodedExtractedEdges,gradient_bicubic,graDiff);
-//      cv::imshow("gb-gh", gradient_bicubic - erodedExtractedEdges);
-//      cv::imshow("gh-gb", erodedExtractedEdges - gradient_bicubic);
-//
-//      //YChannel = YChannel;
-//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
-//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(graDiff);
-//      //YChannel = YChannel + 0.2*originalDiff + 0.004*(erodedExtractedEdges - gradient_bicubic);
-//      //YChannel = YChannel + 40.4*(erodedExtractedEdges - gradient_bicubic);
-//      //YChannel = YChannel + 0.20*originalDiff  + 0.004*(erodedExtractedEdges - gradient_bicubic);
-//      //YChannel = YChannel + 900*YChannel.mul(erodedExtractedEdges - gradient_bicubic,1);
-//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1) - 0.002*originalDiff;
-//
-//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1);
-//      //YChannel = YChannel + 0.002*YChannel.mul(graDiff,1);
-//
-//      //YChannel = YChannel - 0.4*originalDiff;
-//      //
-//      //YChannel = YChannel + YChannel.absdiff(originalDiff,1);
-//      //YChannel = YChannel + YChannel.mul(graDiff,1);
-//
-//
-//      //YChannel = YChannel + 0.2*originalDiff;
-//
-//      //YChannel = YChannel + (erodedExtractedEdges - gradient_bicubic);
-//      
-//      // gradient compensated sharp edges.
-//      //YChannel = YChannel + 400*(erodedExtractedEdges - gradient_bicubic);
-//
-//      
-//      // NOTE: get difference currently modifies the YChannel result!
-//      originalDiff = getDifference(originalYChannel, YChannel, blurKernel);
-//      gradient_bicubic = getGradient(YChannel);
-//      i++;
-//    }
-//
-//#if SHOW_IMAGES
-//    cv::imshow("erod-grad",(erodedExtractedEdges - gradient_bicubic));
-//    cv::imshow("grad-erod",(gradient_bicubic - erodedExtractedEdges));
-//    cv::imshow("YchannelFinal",YChannel);
-//    cv::imshow("graDiff",graDiff);
-//    cv::imshow("gradient_last_iteration",gradient_bicubic);
-//    cv::imshow("originalDiff",originalDiff);
-//    cv::imshow("grad*Y",YChannel.mul(graDiff,0.5));
-//    //cv::subtract(YChannel,originalDiff,YChannel);
-//    //cv::imshow("sum Y - OD",YChannel);
-//#endif
-//    
-//    
-//    
-//
-//    //cv::GaussianBlur(YChannel,YChannel,cv::Size(11,11),1,1); 
-//    //cv::imshow("YChannel1d blur", YChannel);
-//    //Assign modified Y channel back to vector
-//    //YUVChannels[Y] = YChannel;  
-//    YUVChannels[Y] = YChannel; 
-//    
-//   getFinalTexture(originalYChannel,YChannel,ALD,scaleFactor);
-//    // convert back to RGB format.
-//    cv::Mat processedRGB = convertToRGB(YUVChannels);
-//#if SHOW_IMAGES
-//    cv::imshow("processedRGB",processedRGB);
-//#endif
-//
-//   // std::cout << "bicubic PSNR: " << getPSNR(inputImage,inputBICUBIC) << "\n";
-//    std::cout << "bicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";
-//    std::cout << "sharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
   }
 
 
@@ -2461,6 +2299,94 @@ private:
   std::vector<cv::Mat> outFrames;
   cv::Mat ALD;
   cv::VideoCapture capture;
+
+ float distance(float x1, float y1, float x2, float y2)
+  {
+    return cv::sqrt( (x1-x2)*(x1-x2) - (y1-y2)*(y1-y2) );
+  } 
+ 
+  // Divides gradient map in half along gradient curves and sharpens each half.
+  void splitSharpen(cv::Mat gmap, cv::Mat ymap, cv::Mat sharpenedYmap, cv::Point p, int maxRadius, int threshold)
+  {
+    int radius = 1;
+    int difference = 0;
+    int maxDiff = 0;
+    int maxDiffx = -1;
+    int maxDiffy = -1;
+
+    while (radius <= maxRadius)
+    {
+      for (int y = (p.y - radius); y <= (p.y + radius) && (y >= 0) && (y < gmap.rows) ; y++)
+      {
+        for (int x = (p.x - radius); x <= (p.x + radius) && (x >= 0) && (x < gmap.cols) ; x++)
+        {
+            if ( distance(p.x, p.y, x, y) <= radius /* && 
+          		(x >= 0) && 
+          		(y >= 0) &&
+          		(x < gmap.cols) &&
+          		(y < gmap.rows) */ )
+            {
+              	// dont actually need all of the above.
+              	// can search for closest pixel using a
+              	// winding pattern going around the center
+              	// pixel, and stopping search once conditions are met.
+              	// Will be more efficient.
+              	//
+              	// Algo summary:
+              	// 1) Take difference of a thresholded 
+              	// non-black pixel and its
+              	// closest neighbors in gradient map.
+              	// 2) Choose neighbor with difference greater 
+              	// than a threshold, and assign it's Y value 
+              	// to the original pixel.
+              	// 
+              	// Effect: edge contours will be sharpened 
+              	// along their centers, instead of along 
+              	// the outside edge.
+              	// 
+              	// Can search for pixels using multiple radii,
+              	// ie. search all pixels for radius = 1, 
+              	// store the max difference and pixel where max occurs,
+              	// if difference < threshold, continue
+              	// else assign the YValue of max diff pixel to current pixel.
+              
+              
+              //difference = cv::fast_abs( (int)gmap.at<unsigned char>(p.y,p.x) - (int)gmap.at<unsigned char>(y,x) );
+              difference = (int)gmap.at<unsigned char>(p.y,p.x) - (int)gmap.at<unsigned char>(y,x);
+	      
+	      if ( difference > maxDiff )
+	      {
+                maxDiff = difference;
+		maxDiffx = x;
+		maxDiffy = y;
+	      }
+            }
+          }
+        }
+      if (maxDiff >= threshold)
+      {
+        sharpenedYmap.at<unsigned char>(p.y,p.x) = (int)ymap.at<unsigned char>(maxDiffy,maxDiffx);
+	break;
+      }
+      radius++;
+    }
+  }
+
+  void gradientSharpen(cv::Mat gmap, cv::Mat ymap, cv::Mat sharpenedYmap, int radius, int threshold, int maskValue)
+  {
+    for (int y = 0; y < gmap.rows; y++)
+    {
+      for (int x = 0; x < gmap.cols; x++)
+      {
+        //ALD.at<unsigned char>(y,x) = (int)calculateALD(ALD, cv::Point(x,y), radius);
+	if ((int)gmap.at<unsigned char>(y,x) > maskValue )
+	{
+	  splitSharpen(gmap, ymap, sharpenedYmap,cv::Point(x,y),radius, threshold);
+	}
+      }
+    }
+  }
+
 
   void sharpenEdgesOrg(int i)
   {
@@ -2792,10 +2718,6 @@ private:
     return output;
   }
 
-  float distance(float x1, float y1, float x2, float y2)
-  {
-    return cv::sqrt( (x1-x2)*(x1-x2) - (y1-y2)*(y1-y2) );
-  }
 
   float calculateALD(cv::Mat inImage, cv::Point gc, float radius)
   {
@@ -3081,7 +3003,7 @@ int main(int argc,char* argv[])
 //  sv.writeVideo(argv[2]);
 //  sv.testPSNR();
 //  sv.testPSNR();
-  sv.testSharpenEdges6(argv[3]);
+  sv.testSharpenEdges6(argv[1],argv[2]);
 
 
   //Wait until any key is pressed

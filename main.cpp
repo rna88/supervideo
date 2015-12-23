@@ -2109,10 +2109,40 @@ imshow("orgo",originalYChannelOrg);
     //gradEroded = getGradient(YChannel);
 
 
+    cv::Mat resizedEMY = erodedMaskY.clone();
+    cv::Mat resizedY = YChannel.clone();
+    cv::resize(resizedEMY,resizedEMY,cv::Size(0,0),4.0,4.0,CV_INTER_CUBIC);
+    cv::resize(resizedY,resizedY,cv::Size(0,0),4.0,4.0,CV_INTER_CUBIC);
+    cv::Mat sharpY = resizedY.clone();
+    //cv::Mat sharpY = YChannel.clone();
 
-    cv::Mat sharpY = YChannel.clone();
-    gradientSharpen(erodedMaskY,YChannel.clone(),sharpY,10,1,1);
-    imshow("YC_SUPER",sharpY);
+    int tRadius = 1;
+    int tThreshold = 1;
+    int tMask = 50;
+    //int tMask = 110;
+
+    gradientSharpen(resizedEMY,resizedY,sharpY,tRadius,tThreshold,tMask);
+    //gradientSharpen(erodedMaskY,YChannel.clone(),sharpY,tRadius,tThreshold,tMask);
+    cv::imshow("YC_SUPER",sharpY);
+    cv::Mat sharpMask = sharpY - resizedY;
+    //cv::Mat sharpMask = sharpY - YChannel.clone();
+    cv::imshow("YC_SUPER_mask",sharpMask);
+    cv::Mat sharpCanvas = resizedY.clone();
+    //cv::Mat sharpCanvas = YChannel.clone();
+    sharpCanvas = 128;
+    gradientSharpen(resizedEMY,resizedY,sharpCanvas,tRadius,tThreshold,tMask);
+    //gradientSharpen(erodedMaskY,YChannel.clone(),sharpCanvas,tRadius,tThreshold,tMask);
+    cv::imshow("YC_SUPER_canvas",sharpCanvas);
+    //cv::GaussianBlur(sharpCanvas,sharpCanvas,cv::Size(3,3),1,1);
+    //cv::resize(sharpCanvas,sharpCanvas,cv::Size(0,0),2.0,2.0,CV_INTER_CUBIC);
+    //cv::resize(sharpCanvas,sharpCanvas,cv::Size(0,0),0.5,0.5,CV_INTER_CUBIC);
+    //imshow("YC_SUPER_canvas_blurred",sharpCanvas);
+
+    cv::resize(sharpY,sharpY,cv::Size(0,0),0.25,0.25,CV_INTER_CUBIC);
+    cv::resize(sharpCanvas,sharpCanvas,cv::Size(0,0),0.25,0.25,CV_INTER_CUBIC);
+
+    cv::imshow("YC_SUPER_r",sharpY);
+    cv::imshow("YC_SUPER_canvas_r",sharpCanvas);
 
     cv::Mat Y2;
     cv::Mat Xt = cv::Mat::zeros(ALD.rows,ALD.cols,ALD.type());
@@ -2353,6 +2383,7 @@ private:
               
               //difference = cv::fast_abs( (int)gmap.at<unsigned char>(p.y,p.x) - (int)gmap.at<unsigned char>(y,x) );
               difference = (int)gmap.at<unsigned char>(p.y,p.x) - (int)gmap.at<unsigned char>(y,x);
+	      //if (difference <= 0) difference = 0; 
 	      
 	      if ( difference > maxDiff )
 	      {

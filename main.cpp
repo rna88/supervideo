@@ -1919,7 +1919,7 @@ imshow("orgo",originalYChannelOrg);
     // downscale original so we can test the uprezzed.
     //cv::Mat inputDownscaled;
     cv::Mat inputDownscaled = inputImage.clone();
-   // cv::resize(inputImage,inputDownscaled,outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
+    //cv::resize(inputImage,inputDownscaled,outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
     cv::resize(inputImage,inputDownscaled,outImageSize,1.0,1.0,CV_INTER_CUBIC);
     //cv::resize(inputImage,inputDownscaled,outImageSize,1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
 
@@ -2072,7 +2072,7 @@ imshow("orgo",originalYChannelOrg);
 
     cv::GaussianBlur(erodedMaskY,erodedMaskY,cv::Size(5,5),1,1);
     cv::resize(erodedMaskY,erodedMaskY,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_CUBIC);
-    erodedMaskY *= 2;
+    erodedMaskY *= 3;
     cv::imshow("erodedMaskedFinal",erodedMaskY);
 
 
@@ -2112,13 +2112,14 @@ imshow("orgo",originalYChannelOrg);
     cv::Mat resizedEMY = erodedMaskY.clone();
     cv::Mat resizedY = YChannel.clone();
     cv::resize(resizedEMY,resizedEMY,cv::Size(0,0),4.0,4.0,CV_INTER_CUBIC);
+    //cv::GaussianBlur(resizedEMY,resizedEMY,cv::Size(25,25),9,9);
     cv::resize(resizedY,resizedY,cv::Size(0,0),4.0,4.0,CV_INTER_CUBIC);
     cv::Mat sharpY = resizedY.clone();
     //cv::Mat sharpY = YChannel.clone();
 
-    int tRadius = 1;
+    int tRadius = 10;
     int tThreshold = 1;
-    int tMask = 50;
+    int tMask = 25;
     //int tMask = 110;
 
     gradientSharpen(resizedEMY,resizedY,sharpY,tRadius,tThreshold,tMask);
@@ -2271,7 +2272,8 @@ imshow("orgo",originalYChannelOrg);
    imshow("Xt",Xt);
     cv::pow(gg,2,gg);
     cv::imshow("lines",gg);
-   YUVChannels[Y] = Xt; 
+   //YUVChannels[Y] = Xt;  ///////////////////////////////
+   YUVChannels[Y] = sharpY; 
    //YUVChannels[Y] = YChannel; 
     
    //cv::Mat finalImage = getFinalTexture(originalYChannel,Xt,ALD,scaleFactor);
@@ -2284,9 +2286,13 @@ imshow("orgo",originalYChannelOrg);
    cv::imshow("RGB",processedRGB);
    cv::resize(RGBOrg,RGBOrg,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_NN);
    cv::resize(processedRGB,processedRGB,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_NN);
+   cv::resize(sharpY,sharpY,cv::Size(0,0),1.0/scaleFactor,1.0/scaleFactor,CV_INTER_NN);
 
    std::cout << "Orgbicubic PSNR: " << getPSNR(inputImage,RGBOrg) << "\n";
    std::cout << "Orgsharpened PSNR: " << getPSNR(inputImage,processedRGB) << "\n";
+
+   //std::cout << "Orgbicubic PSNR: " << getPSNR(originalYChannelOrg,YChannel) << "\n";
+   //std::cout << "Orgsharpened PSNR: " << getPSNR(originalYChannelOrg,sharpY) << "\n";
   }
 
 
